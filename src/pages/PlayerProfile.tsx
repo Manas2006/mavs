@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { Typography, Box, Paper, Grid, Container, List, ListItem, ListItemText, useTheme, Divider, Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Typography, Box, Paper, Grid, Container, List, ListItem, ListItemText, useTheme, Divider, Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { useState, useEffect } from 'react';
 
 const PlayerProfile = () => {
@@ -13,6 +13,8 @@ const PlayerProfile = () => {
   const [gameLogsView, setGameLogsView] = useState<'perGame' | 'totals'>('perGame');
   const [gameReports, setGameReports] = useState<any[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<any | null>(null);
+  const [scoutReports, setScoutReports] = useState<any[]>([]);
+  const [newReport, setNewReport] = useState({ notes: '', rating: 5 });
   const theme = useTheme();
 
   useEffect(() => {
@@ -28,6 +30,7 @@ const PlayerProfile = () => {
         setMeasurements(data.measurements.find((m: any) => m.playerId === Number(id)) || {});
         setGameReports((data.game_logs || []).filter((g: any) => g.playerId === Number(id)));
         setSeasonTotals((data.seasonLogs || []).find((log: any) => log.playerId === Number(id)) || null);
+        setScoutReports((data.scoutingReports || []).filter((r: any) => r.playerId === Number(id)));
         setLoading(false);
       })
       .catch(err => {
@@ -35,6 +38,21 @@ const PlayerProfile = () => {
         setLoading(false);
       });
   }, [id]);
+
+  const handleSubmitReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReport.notes.trim()) return;
+    
+    const report = {
+      ...newReport,
+      playerId: Number(id),
+      reportId: Date.now().toString(),
+      scout: 'Current User' // In a real app, this would come from authentication
+    };
+    
+    setScoutReports([report, ...scoutReports]);
+    setNewReport({ notes: '', rating: 5 });
+  };
 
   if (loading) return <Box>Loading...</Box>;
   if (error) return <Box>Error: {error}</Box>;
@@ -223,7 +241,7 @@ const PlayerProfile = () => {
                             <TableCell>{game.date ? new Date(game.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}</TableCell>
                             <TableCell>{game.opponent || '-'}</TableCell>
                             <TableCell>{game.pts ?? '-'}</TableCell>
-                            <TableCell>{game.reb ?? '-'}</TableCell>
+                            <TableCell>{game.oreb && game.dreb ? game.oreb + game.dreb : game.reb ?? '-'}</TableCell>
                             <TableCell>{game.ast ?? '-'}</TableCell>
                             <TableCell>{game.timePlayed ?? '-'}</TableCell>
                           </TableRow>
@@ -232,7 +250,7 @@ const PlayerProfile = () => {
                           <TableRow>
                             <TableCell colSpan={2} sx={{ fontWeight: 700 }}>Totals</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.PTS ?? '-'}</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.REB ?? '-'}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.ORB && seasonTotals.DRB ? seasonTotals.ORB + seasonTotals.DRB : seasonTotals.TRB ?? '-'}</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.AST ?? '-'}</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.MP ?? '-'}</TableCell>
                           </TableRow>
@@ -246,7 +264,58 @@ const PlayerProfile = () => {
               </TableContainer>
             </Box>
           )}
-          {tab === 2 && <Box>Scouting Reports content goes here</Box>}
+          {tab === 2 && (
+            <Box>
+              <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>Scouting Reports</Typography>
+              
+              {/* New Report Form */}
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Box component="form" onSubmit={handleSubmitReport} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Typography variant="h6" gutterBottom>Submit a Scouting Report</Typography>
+                  <TextField
+                    label="Notes"
+                    multiline
+                    minRows={2}
+                    value={newReport.notes}
+                    onChange={e => setNewReport(prev => ({ ...prev, notes: e.target.value }))}
+                    required
+                    fullWidth
+                  />
+                  <FormControl sx={{ width: 120 }}>
+                    <InputLabel id="rating-label">Rating</InputLabel>
+                    <Select
+                      labelId="rating-label"
+                      value={newReport.rating}
+                      label="Rating"
+                      onChange={e => setNewReport(prev => ({ ...prev, rating: Number(e.target.value) }))}
+                    >
+                      {[...Array(10)].map((_, i) => (
+                        <MenuItem key={i + 1} value={i + 1}>{i + 1}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button type="submit" variant="contained" color="primary">
+                    Submit Report
+                  </Button>
+                </Box>
+              </Paper>
+
+              {/* Existing Reports */}
+              {scoutReports.length === 0 ? (
+                <Typography variant="body2">No scouting reports available.</Typography>
+              ) : (
+                scoutReports.map((report, idx) => (
+                  <Paper key={idx} sx={{ mb: 2, p: 1.5, border: '1px solid #eee', borderRadius: 1 }}>
+                    {report.scout && (
+                      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>{report.scout}</Typography>
+                    )}
+                    <Typography variant="body2" color="text.secondary">Rating: {report.rating}/10</Typography>
+                    <Typography variant="body1">{report.report}</Typography>
+                  </Paper>
+                ))
+              )}
+            </Box>
+          )}
         </Box>
       </Paper>
     </Container>
