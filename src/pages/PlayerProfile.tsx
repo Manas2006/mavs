@@ -14,14 +14,6 @@ const PlayerProfile = () => {
   const [gameReports, setGameReports] = useState<any[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<any | null>(null);
   const theme = useTheme();
-  const [mode, setMode] = useState<'light' | 'dark'>(() => {
-    const savedMode = localStorage.getItem('themeMode');
-    return (savedMode === 'dark' ? 'dark' : 'light');
-  });
-
-  useEffect(() => {
-    localStorage.setItem('themeMode', mode);
-  }, [mode]);
 
   useEffect(() => {
     fetch('/players.json')
