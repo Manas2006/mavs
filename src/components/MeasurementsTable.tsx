@@ -6,8 +6,33 @@ interface MeasurementsTableProps {
   title?: string;
 }
 
+const keyLabels: Record<string, string> = {
+  heightNoShoes: 'Height (no shoes)',
+  heightShoes: 'Height (with shoes)',
+  wingspan: 'Wingspan',
+  reach: 'Reach',
+  maxVertical: 'Max Vertical',
+  noStepVertical: 'No Step Vertical',
+  weight: 'Weight',
+  bodyFat: 'Body Fat',
+  handLength: 'Hand Length',
+  handWidth: 'Hand Width',
+  agility: 'Agility',
+  sprint: 'Sprint',
+  shuttleLeft: 'Shuttle Left',
+  shuttleRight: 'Shuttle Right',
+  shuttleBest: 'Shuttle Best',
+};
+
+function toLabel(key: string) {
+  if (keyLabels[key]) return keyLabels[key];
+  // Fallback: split camelCase and capitalize
+  return key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+}
+
 const MeasurementsTable: React.FC<MeasurementsTableProps> = ({ measurements, title }) => {
-  const entries = Object.entries(measurements).filter(([k]) => k !== 'playerId');
+  const relevantKeys = ['wingspan', 'reach', 'maxVertical', 'bodyFat'];
+  const entries = Object.entries(measurements).filter(([k]) => relevantKeys.includes(k));
   return (
     <>
       {title && (
@@ -19,7 +44,7 @@ const MeasurementsTable: React.FC<MeasurementsTableProps> = ({ measurements, tit
             {entries.length > 0 ? (
               entries.map(([key, value]) => (
                 <TableRow key={key}>
-                  <TableCell sx={{ border: 0 }}>{key}</TableCell>
+                  <TableCell sx={{ border: 0 }}>{toLabel(key)}</TableCell>
                   <TableCell sx={{ border: 0, textAlign: 'right', fontWeight: 600 }}>{value !== undefined && value !== null ? String(value) : '-'}</TableCell>
                 </TableRow>
               ))

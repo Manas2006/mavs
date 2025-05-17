@@ -7,7 +7,14 @@ interface ScoutRankingsTableProps {
 }
 
 const ScoutRankingsTable: React.FC<ScoutRankingsTableProps> = ({ rankings, title }) => {
-  const entries = Object.entries(rankings).filter(([k]) => k !== 'playerId');
+  const relevantKeys = [
+    'ESPN Rank',
+    'Sam Vecenie Rank',
+    "Kevin O'Connor Rank",
+    'Kyle Boone Rank',
+    'Gary Parrish Rank',
+  ];
+  const entries = Object.entries(rankings).filter(([k]) => relevantKeys.includes(k));
   return (
     <>
       {title && (
