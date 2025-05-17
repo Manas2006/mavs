@@ -12,6 +12,12 @@ import {
   Box,
   Chip,
   Tooltip,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Avatar,
 } from '@mui/material';
 
 const getAverageRanking = (rankings: any) => {
@@ -36,6 +42,9 @@ const BigBoard = () => {
   const [scoutNames, setScoutNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [team, setTeam] = useState('');
+  const [allTeams, setAllTeams] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,6 +69,9 @@ const BigBoard = () => {
         // Get all unique scout names for columns
         const firstWithRankings = sorted.find(p => p.scoutRankings && Object.keys(p.scoutRankings).length > 0);
         setScoutNames(firstWithRankings ? Object.keys(firstWithRankings.scoutRankings).filter(k => k !== 'playerId') : []);
+        // Get all unique teams for filter
+        const teams = Array.from(new Set(sorted.map((p: any) => p.currentTeam).filter(Boolean)));
+        setAllTeams(teams);
         setLoading(false);
       })
       .catch(err => {
@@ -68,20 +80,53 @@ const BigBoard = () => {
       });
   }, []);
 
+  // Filter players by search and team
+  const filteredPlayers = players.filter(player => {
+    const matchesName = player.name.toLowerCase().includes(search.toLowerCase());
+    const matchesTeam = team ? player.currentTeam === team : true;
+    return matchesName && matchesTeam;
+  });
+
   if (loading) return <Box>Loading...</Box>;
   if (error) return <Box>Error: {error}</Box>;
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Big Board
+      <Typography variant="h3" sx={{ fontWeight: 700, mb: 3, textAlign: 'left' }}>
+        Mavericks Big Board
       </Typography>
-      <TableContainer component={Paper}>
+      <Paper elevation={2} sx={{ p: 2, borderRadius: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+          <TextField
+            label="Search by name"
+            variant="outlined"
+            size="small"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            sx={{ minWidth: 200 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel id="team-filter-label">Team</InputLabel>
+            <Select
+              labelId="team-filter-label"
+              value={team}
+              label="Team"
+              onChange={e => setTeam(e.target.value)}
+            >
+              <MenuItem value="">All Teams</MenuItem>
+              {allTeams.map(t => (
+                <MenuItem key={t} value={t}>{t}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Paper>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto', p: { xs: 1, sm: 2 } }}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>Rank</TableCell>
-              <TableCell>Name</TableCell>
+              <TableCell>Player</TableCell>
               <TableCell>Team</TableCell>
               <TableCell>Avg. Rank</TableCell>
               {scoutNames.map((scout) => (
@@ -90,7 +135,7 @@ const BigBoard = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {players.map((player, index) => (
+            {filteredPlayers.map((player, index) => (
               <TableRow
                 key={player.playerId}
                 hover
@@ -98,7 +143,20 @@ const BigBoard = () => {
                 sx={{ cursor: 'pointer' }}
               >
                 <TableCell>{index + 1}</TableCell>
-                <TableCell>{player.name}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Avatar
+                      src={player.photoUrl || undefined}
+                      alt={player.name}
+                      sx={{ width: 36, height: 36, bgcolor: 'grey.300', color: 'text.primary', fontWeight: 600 }}
+                    >
+                      {!player.photoUrl && player.name ? player.name[0] : ''}
+                    </Avatar>
+                    <Typography component="span" sx={{ fontWeight: 600 }}>
+                      {player.name}
+                    </Typography>
+                  </Box>
+                </TableCell>
                 <TableCell>{player.currentTeam}</TableCell>
                 <TableCell>{getAverageRanking(player.scoutRankings)}</TableCell>
                 {scoutNames.map((scout) => {
