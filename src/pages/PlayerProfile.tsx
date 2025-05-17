@@ -10,7 +10,6 @@ const PlayerProfile = () => {
   const [tab, setTab] = useState(0);
   const [scoutRankings, setScoutRankings] = useState<any>({});
   const [measurements, setMeasurements] = useState<any>({});
-  const [seasonStats, setSeasonStats] = useState<any[]>([]);
   const [gameLogsView, setGameLogsView] = useState<'perGame' | 'totals'>('perGame');
   const [gameReports, setGameReports] = useState<any[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<any | null>(null);
@@ -23,10 +22,6 @@ const PlayerProfile = () => {
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
-
-  const toggleColorMode = () => {
-    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
-  };
 
   useEffect(() => {
     fetch('/players.json')
