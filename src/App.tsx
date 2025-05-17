@@ -24,9 +24,16 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
 });
 
 function App() {
-  const [mode, setMode] = useState<'light' | 'dark'>('light');
+  const [mode, setMode] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('themeMode');
+    return saved === 'dark' ? 'dark' : 'light';
+  });
   const theme = useMemo(() => getTheme(mode), [mode]);
-  const toggleMode = () => setMode(m => (m === 'light' ? 'dark' : 'light'));
+  const toggleMode = () => setMode(m => {
+    const next = m === 'light' ? 'dark' : 'light';
+    localStorage.setItem('themeMode', next);
+    return next;
+  });
 
   return (
     <ThemeProvider theme={theme}>
