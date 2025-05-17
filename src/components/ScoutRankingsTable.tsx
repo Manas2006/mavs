@@ -1,4 +1,4 @@
-import { Typography, TableContainer, Table, TableBody, TableRow, TableCell, Paper } from '@mui/material';
+import { Typography, TableContainer, Table, TableBody, TableRow, TableCell } from '@mui/material';
 import React from 'react';
 
 interface ScoutRankingsTableProps {

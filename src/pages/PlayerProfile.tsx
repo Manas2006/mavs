@@ -15,6 +15,18 @@ const PlayerProfile = () => {
   const [gameReports, setGameReports] = useState<any[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<any | null>(null);
   const theme = useTheme();
+  const [mode, setMode] = useState<'light' | 'dark'>(() => {
+    const savedMode = localStorage.getItem('themeMode');
+    return (savedMode === 'dark' ? 'dark' : 'light');
+  });
+
+  useEffect(() => {
+    localStorage.setItem('themeMode', mode);
+  }, [mode]);
+
+  const toggleColorMode = () => {
+    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+  };
 
   useEffect(() => {
     fetch('/players.json')
@@ -162,7 +174,7 @@ const PlayerProfile = () => {
                               : undefined
                           }
                         >
-                          {rank !== undefined && rank !== null ? rank : '-'}
+                          {String(rank !== undefined && rank !== null ? rank : '-')}
                         </Box>
                       </Box>
                     );
@@ -177,7 +189,7 @@ const PlayerProfile = () => {
                   .map(([key, value]) => (
                     <Grid item xs={6} key={key}>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}:</Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>{value !== undefined && value !== null ? value : '-'}</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>{String(value !== undefined && value !== null ? value : '-')}</Typography>
                     </Grid>
                   ))}
               </Grid>
@@ -221,7 +233,7 @@ const PlayerProfile = () => {
                     {gameLogsView === 'perGame'
                       ? gameReports.map((game, idx) => (
                           <TableRow key={idx}>
-                            <TableCell>{game.date || '-'}</TableCell>
+                            <TableCell>{game.date ? new Date(game.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}</TableCell>
                             <TableCell>{game.opponent || '-'}</TableCell>
                             <TableCell>{game.pts ?? '-'}</TableCell>
                             <TableCell>{game.reb ?? '-'}</TableCell>
