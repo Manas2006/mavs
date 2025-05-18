@@ -16,6 +16,7 @@ import {
   CardContent,
   useTheme,
   Chip,
+  Tooltip as MuiTooltip,
 } from '@mui/material';
 
 const formatHeight = (inches: number) => {
@@ -34,16 +35,22 @@ const formatAge = (birthDate: string) => {
   return ageInYears.toFixed(1);
 };
 
-const StatChip = ({ label, value, thresholds }: { label: string; value: number; thresholds: { high: number; low: number } }) => {
+const StatChip = ({ label, value, thresholds, avg }: { label: string; value: number; thresholds: { high: number; low: number }, avg: number }) => {
   const theme = useTheme();
-  let color = 'default';
+  let color: 'success' | 'error' | 'default' = 'default';
   if (value >= thresholds.high) color = 'success';
   if (value <= thresholds.low) color = 'error';
 
-  return (
+  const diff = value - avg;
+  const showTooltip = color === 'success' || color === 'error';
+  const tooltipText = diff > 0
+    ? `+${diff.toFixed(2)} above avg`
+    : `${diff.toFixed(2)} below avg`;
+
+  const chip = (
     <Chip
       label={`${label}: ${value.toFixed(1)}`}
-      color={color as 'success' | 'error' | 'default'}
+      color={color}
       size="small"
       sx={{
         fontWeight: 600,
@@ -52,6 +59,10 @@ const StatChip = ({ label, value, thresholds }: { label: string; value: number; 
       }}
     />
   );
+
+  return showTooltip ? (
+    <MuiTooltip title={tooltipText} arrow>{chip}</MuiTooltip>
+  ) : chip;
 };
 
 const BigBoard = () => {
@@ -151,7 +162,7 @@ const BigBoard = () => {
           >
             <CardContent>
               <Grid container spacing={2} alignItems="center">
-                {/* Left Section: Rank, Logo, Name, Position */}
+                {/* Left Section: Rank, Avatar, Name, Position */}
                 <Grid item xs={12} md={4}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Typography
@@ -165,10 +176,12 @@ const BigBoard = () => {
                       {index + 1}
                     </Typography>
                     <Avatar
-                      src={player.photoUrl}
+                      src={player.photoUrl || undefined}
                       alt={player.name}
-                      sx={{ width: 48, height: 48, bgcolor: 'grey.300' }}
-                    />
+                      sx={{ width: 48, height: 48, bgcolor: 'grey.300', fontWeight: 700, fontSize: 24 }}
+                    >
+                      {!player.photoUrl && player.name ? player.name[0] : null}
+                    </Avatar>
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 700 }}>
                         {player.name}
@@ -198,31 +211,30 @@ const BigBoard = () => {
                 {/* Right Section: Stats */}
                 <Grid item xs={12} md={5}>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <StatChip
-                      label="PTS"
-                      value={player.seasonStats?.PTS || 0}
-                      thresholds={{ high: 15, low: 8 }}
-                    />
-                    <StatChip
-                      label="REB"
-                      value={player.seasonStats?.TRB || 0}
-                      thresholds={{ high: 7, low: 3 }}
-                    />
-                    <StatChip
-                      label="AST"
-                      value={player.seasonStats?.AST || 0}
-                      thresholds={{ high: 3.5, low: 1.5 }}
-                    />
-                    <StatChip
-                      label="BLK"
-                      value={player.seasonStats?.BLK || 0}
-                      thresholds={{ high: 1.2, low: 0.3 }}
-                    />
-                    <StatChip
-                      label="STL"
-                      value={player.seasonStats?.STL || 0}
-                      thresholds={{ high: 1.2, low: 0.3 }}
-                    />
+                    {(() => {
+                      const stats = ['PTS', 'TRB', 'AST', 'BLK', 'STL'];
+                      const statThresholds: Record<string, { high: number; low: number }> = {
+                        PTS: { high: 15, low: 8 },
+                        TRB: { high: 7, low: 3 },
+                        AST: { high: 3.5, low: 1.5 },
+                        BLK: { high: 1.2, low: 0.3 },
+                        STL: { high: 1.2, low: 0.3 },
+                      };
+                      const avgs: Record<string, number> = {};
+                      stats.forEach(stat => {
+                        const values = players.map(p => p.seasonStats?.[stat] || 0);
+                        avgs[stat] = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+                      });
+                      return stats.map(stat => (
+                        <StatChip
+                          key={stat}
+                          label={stat}
+                          value={player.seasonStats?.[stat] || 0}
+                          thresholds={statThresholds[stat]}
+                          avg={avgs[stat]}
+                        />
+                      ));
+                    })()}
                   </Stack>
                 </Grid>
               </Grid>

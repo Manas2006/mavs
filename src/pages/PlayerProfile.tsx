@@ -1,8 +1,8 @@
 import { useParams } from 'react-router-dom';
-import { Typography, Box, Paper, Grid, Container, List, ListItem, ListItemText, useTheme, Divider, Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Button, FormControl, InputLabel, Select, MenuItem, Checkbox, FormGroup, FormControlLabel } from '@mui/material';
+import { Typography, Box, Paper, Grid, Container, List, ListItem, ListItemText, useTheme, Divider, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Button, FormControl, InputLabel, Select, MenuItem, Checkbox, FormGroup, FormControlLabel, Tooltip as MuiTooltip } from '@mui/material';
 import type { Theme } from '@mui/material';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, BarChart, Bar } from 'recharts';
 import styled from '@emotion/styled';
 
@@ -14,19 +14,6 @@ const GlowingImage = styled(motion.img)<{ theme: Theme }>`
   border-radius: 16px;
   box-shadow: 0 0 20px ${props => props.theme.palette.primary.main}40;
   filter: drop-shadow(0 0 8px ${props => props.theme.palette.primary.main}40);
-`;
-
-const ChartContainer = styled(Paper)<{ theme: Theme }>`
-  padding: 20px;
-  margin-top: 20px;
-  border-radius: 16px;
-  background: ${props => props.theme.palette.background.paper};
-`;
-
-const RadarChartContainer = styled(Box)`
-  width: 100%;
-  height: 300px;
-  margin-top: 20px;
 `;
 
 // New styled components for Game Logs
@@ -201,7 +188,6 @@ const PlayerProfile = () => {
   const [tab, setTab] = useState(0);
   const [scoutRankings, setScoutRankings] = useState<any>({});
   const [measurements, setMeasurements] = useState<any>({});
-  const [gameLogsView, setGameLogsView] = useState<'perGame' | 'totals'>('perGame');
   const [gameReports, setGameReports] = useState<any[]>([]);
   const [seasonLogs, setSeasonLogs] = useState<any[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<any | null>(null);
@@ -346,7 +332,7 @@ const PlayerProfile = () => {
         }}
       >
         <Box sx={{ position: 'absolute', top: 20, left: 20, zIndex: 2 }}>
-          <img src="/logo.svg" alt="Mavs Logo" height={36} style={{ opacity: 0.9 }} />
+          <img src="/logo.svg" alt="Mavs Logo" height={90} style={{ opacity: 0.9 }} />
         </Box>
         
         <Typography variant="h3" sx={{ fontWeight: 800, mb: 4, textAlign: 'center', color: theme.palette.primary.main }}>
@@ -494,44 +480,57 @@ const PlayerProfile = () => {
                   <Paper sx={{ p: 2, borderRadius: 2, mb: 3 }}>
                     <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>Scout Rankings</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                      {Object.entries(scoutRankings)
-                        .filter(([k]) => k !== 'playerId')
-                        .map(([scout, rank]) => {
-                          const values = Object.entries(scoutRankings)
-                            .filter(([k]) => k !== 'playerId' && typeof scoutRankings[k] === 'number')
-                            .map(([_, v]) => v as number);
-                          const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
-                          const diff = typeof rank === 'number' && avg !== null ? rank - avg : 0;
+                      {(() => {
+                        const entries = Object.entries(scoutRankings).filter(([k]) => k !== 'playerId');
+                        const values = entries.filter(([_, v]) => typeof v === 'number').map(([_, v]) => v as number);
+                        const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+                        // Only show variance if at least 3 rankings
+                        if (values.length < 3) {
+                          return <Typography variant="body2" color="text.secondary">Not enough scout rankings to show variance.</Typography>;
+                        }
+                        return entries.map(([scout, rank]) => {
+                          if (typeof rank !== 'number') return null;
+                          const diff = avg !== null ? rank - avg : 0;
                           let color: 'success' | 'error' | 'default' = 'default';
                           if (diff <= -3) color = 'success';
                           if (diff >= 3) color = 'error';
+                          const showTooltip = color === 'success' || color === 'error';
+                          const tooltipText = diff > 0
+                            ? `+${diff.toFixed(2)} above avg`
+                            : `${diff.toFixed(2)} below avg`;
+                          const badge = (
+                            <Box
+                              component="span"
+                              sx={{
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 2,
+                                bgcolor:
+                                  color === 'success'
+                                    ? theme.palette.success.main
+                                    : color === 'error'
+                                    ? theme.palette.error.main
+                                    : theme.palette.action.selected,
+                                color: color !== 'default' ? '#fff' : theme.palette.text.primary,
+                                fontWeight: 700,
+                                fontSize: '1rem',
+                                minWidth: 28,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {String(rank)}
+                            </Box>
+                          );
                           return (
                             <Box key={scout} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>{scout}:</Typography>
-                              <Box
-                                component="span"
-                                sx={{
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: 2,
-                                  bgcolor:
-                                    color === 'success'
-                                      ? theme.palette.success.main
-                                      : color === 'error'
-                                      ? theme.palette.error.main
-                                      : theme.palette.action.selected,
-                                  color: color !== 'default' ? '#fff' : theme.palette.text.primary,
-                                  fontWeight: 700,
-                                  fontSize: '1rem',
-                                  minWidth: 28,
-                                  textAlign: 'center',
-                                }}
-                              >
-                                {String(rank !== undefined && rank !== null ? rank : '-')}
-                              </Box>
+                              {showTooltip ? (
+                                <MuiTooltip title={tooltipText} arrow>{badge}</MuiTooltip>
+                              ) : badge}
                             </Box>
                           );
-                        })}
+                        });
+                      })()}
                     </Box>
                   </Paper>
 
