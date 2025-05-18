@@ -14,7 +14,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ mode, toggleMode }) => {
       <AppBar position="static" color="default" elevation={1} sx={{ minHeight: 80, justifyContent: 'center' }}>
         <Toolbar sx={{ minHeight: 80, px: { xs: 2, md: 4 }, justifyContent: 'flex-start', gap: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mr: 4 }}>
-            <img src="/mavs logo.png" alt="Mavs Logo" style={{ height: 48, marginRight: 16 }} />
+            <img src="/logo.svg" alt="Mavs Logo" style={{ height: 48, marginRight: 16 }} />
             <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: 1, color: theme.palette.primary.main, fontSize: { xs: '1.5rem', md: '2.2rem' }, pr: 3 }}>
               Mavericks Draft Hub
             </Typography>

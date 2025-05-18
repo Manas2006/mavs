@@ -40,12 +40,12 @@ const GameLogsContainer = styled(Paper)<{ theme: Theme }>`
   &::before {
     content: '';
     position: absolute;
-    top: 50%;
+    top: 33%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 200px;
     height: 200px;
-    background-image: url('/mavs logo.png');
+    background-image: url('/logo.svg');
     background-size: contain;
     background-repeat: no-repeat;
     opacity: 0.04;
@@ -346,7 +346,7 @@ const PlayerProfile = () => {
         }}
       >
         <Box sx={{ position: 'absolute', top: 20, left: 20, zIndex: 2 }}>
-          <img src="/mavs logo.png" alt="Mavs Logo" height={36} style={{ opacity: 0.9 }} />
+          <img src="/logo.svg" alt="Mavs Logo" height={36} style={{ opacity: 0.9 }} />
         </Box>
         
         <Typography variant="h3" sx={{ fontWeight: 800, mb: 4, textAlign: 'center', color: theme.palette.primary.main }}>
