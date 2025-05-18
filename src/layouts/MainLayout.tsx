@@ -11,72 +11,84 @@ const MainLayout: React.FC<MainLayoutProps> = ({ mode, toggleMode }) => {
   const theme = useTheme();
   const { pathname } = useLocation();
   const isHome = pathname === '/';
-  const isCourtBg = pathname === '/big-board' || pathname === '/compare';
+  const isAppPage = !isHome; // All non-home routes
+
+  // Determine navbar colors based on mode
+  const navbarBg = isHome ? 'transparent' : (mode === 'dark' ? '#0d0d0d' : '#ffffff');
+  const navbarText = isHome ? '#fff' : (mode === 'dark' ? '#fff' : '#000');
+  const navbarHover = isHome ? 'rgba(255,255,255,0.08)' : (mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)');
 
   return (
     <div
       className={
         isHome
           ? 'bg-mavs-hero min-h-screen flex flex-col'
-          : isCourtBg
-            ? 'bg-court min-h-screen flex flex-col'
-            : 'min-h-screen flex flex-col'
+          : 'bg-court min-h-screen flex flex-col'
       }
       style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
     >
       <AppBar
         position="static"
         color="default"
-        elevation={isHome || isCourtBg ? 0 : 1}
+        elevation={isHome ? 0 : 1}
         sx={{
           minHeight: 80,
           justifyContent: 'center',
-          background: isHome || isCourtBg ? 'transparent' : '#0d0d0d',
-          boxShadow: isHome || isCourtBg ? 'none' : undefined,
-          backdropFilter: isHome || isCourtBg ? 'blur(4px)' : undefined,
+          background: navbarBg,
+          boxShadow: isHome ? 'none' : undefined,
+          backdropFilter: isHome ? 'blur(4px)' : undefined,
         }}
       >
         <Toolbar sx={{ minHeight: 80, px: { xs: 2, md: 4 }, justifyContent: 'flex-start', gap: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mr: 4 }}>
             <img src="/logo.svg" alt="Mavs Logo" style={{ height: 48, marginRight: 16 }} />
-            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: 1, color: isHome || isCourtBg ? '#fff' : theme.palette.primary.main, fontSize: { xs: '1.5rem', md: '2.2rem' }, pr: 3 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: 1, color: isHome ? '#fff' : theme.palette.primary.main, fontSize: { xs: '1.5rem', md: '2.2rem' }, pr: 3 }}>
               Mavericks Draft Hub
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flex: 1 }}>
             <NavLink to="/" end style={({ isActive }) => ({
-              color: isHome || isCourtBg ? '#fff' : (isActive ? theme.palette.primary.main : theme.palette.text.primary),
+              color: isHome ? '#fff' : (isActive ? theme.palette.primary.main : navbarText),
               textDecoration: 'none',
               fontWeight: isActive ? 700 : 500,
               fontSize: '1.15rem',
               padding: '8px 18px',
               borderRadius: 8,
               transition: 'background 0.2s',
-              background: isActive && (isHome || isCourtBg) ? 'rgba(255,255,255,0.08)' : (isActive ? theme.palette.action.hover : 'none'),
+              background: isActive && isHome ? navbarHover : (isActive ? navbarHover : 'none'),
+              '&:hover': {
+                background: navbarHover,
+              }
             })}>
               Home
             </NavLink>
             <NavLink to="/big-board" style={({ isActive }) => ({
-              color: isHome || isCourtBg ? '#fff' : (isActive ? theme.palette.primary.main : theme.palette.text.primary),
+              color: isHome ? '#fff' : (isActive ? theme.palette.primary.main : navbarText),
               textDecoration: 'none',
               fontWeight: isActive ? 700 : 500,
               fontSize: '1.15rem',
               padding: '8px 18px',
               borderRadius: 8,
               transition: 'background 0.2s',
-              background: isActive && (isHome || isCourtBg) ? 'rgba(255,255,255,0.08)' : (isActive ? theme.palette.action.hover : 'none'),
+              background: isActive && isHome ? navbarHover : (isActive ? navbarHover : 'none'),
+              '&:hover': {
+                background: navbarHover,
+              }
             })}>
               Big Board
             </NavLink>
             <NavLink to="/compare" style={({ isActive }) => ({
-              color: isHome || isCourtBg ? '#fff' : (isActive ? theme.palette.primary.main : theme.palette.text.primary),
+              color: isHome ? '#fff' : (isActive ? theme.palette.primary.main : navbarText),
               textDecoration: 'none',
               fontWeight: isActive ? 700 : 500,
               fontSize: '1.15rem',
               padding: '8px 18px',
               borderRadius: 8,
               transition: 'background 0.2s',
-              background: isActive && (isHome || isCourtBg) ? 'rgba(255,255,255,0.08)' : (isActive ? theme.palette.action.hover : 'none'),
+              background: isActive && isHome ? navbarHover : (isActive ? navbarHover : 'none'),
+              '&:hover': {
+                background: navbarHover,
+              }
             })}>
               Compare Players
             </NavLink>
@@ -84,7 +96,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ mode, toggleMode }) => {
           <Box sx={{ flex: 1 }} />
           <FormControlLabel
             control={<Switch checked={mode === 'dark'} onChange={toggleMode} color="primary" />}
-            label={<Typography sx={{ fontWeight: 600, fontSize: '1rem', color: isHome || isCourtBg ? '#fff' : undefined }}>Dark Mode</Typography>}
+            label={<Typography sx={{ fontWeight: 600, fontSize: '1rem', color: isHome ? '#fff' : navbarText }}>Dark Mode</Typography>}
             sx={{ ml: 2 }}
           />
         </Toolbar>
