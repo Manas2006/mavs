@@ -76,9 +76,27 @@ const fadeIn = {
   transition: { duration: 0.5 }
 };
 
+// Type definitions
+interface GameLog {
+  date: string;
+  pts: number;
+  reb: number;
+  ast: number;
+  timePlayed: string;
+  oreb?: number;
+  dreb?: number;
+}
+
 // Helper function to round to 3 decimal places
 const roundToThree = (num: number): number => {
   return Math.round(num * 1000) / 1000;
+};
+
+// Helper function to convert time string to minutes
+const convertTimeToMinutes = (timeStr: string): number => {
+  if (!timeStr) return 0;
+  const [minutes, seconds] = timeStr.split(':').map(Number);
+  return minutes + (seconds / 60);
 };
 
 // Chart data processing functions
@@ -137,15 +155,33 @@ const processSeasonData = (seasonLogs: any[]) => {
   }
 };
 
+// Process game logs for visualization
+const processGameLogs = (gameReports: GameLog[]) => {
+  console.log('Raw game reports:', gameReports);
+  if (!gameReports.length) return [];
+  
+  const processed = gameReports
+    .sort((a: GameLog, b: GameLog) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map((game: GameLog) => ({
+      date: new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      pts: Number(game.pts) || 0,
+      reb: Number(game.oreb && game.dreb ? game.oreb + game.dreb : game.reb) || 0,
+      ast: Number(game.ast) || 0,
+      min: convertTimeToMinutes(game.timePlayed)
+    }));
+  console.log('Processed game logs:', processed);
+  return processed;
+};
+
 // Helper function to calculate season averages
 const calculateSeasonAverages = (gameLogs: any[]) => {
   if (!gameLogs.length) return null;
 
   const totals = gameLogs.reduce((acc, game) => ({
-    pts: acc.pts + (game.pts || 0),
-    reb: acc.reb + (game.oreb && game.dreb ? game.oreb + game.dreb : game.reb || 0),
-    ast: acc.ast + (game.ast || 0),
-    min: acc.min + (game.timePlayed || 0),
+    pts: acc.pts + (Number(game.pts) || 0),
+    reb: acc.reb + (Number(game.oreb && game.dreb ? game.oreb + game.dreb : game.reb) || 0),
+    ast: acc.ast + (Number(game.ast) || 0),
+    min: acc.min + convertTimeToMinutes(game.timePlayed),
     games: acc.games + 1
   }), { pts: 0, reb: 0, ast: 0, min: 0, games: 0 });
 
@@ -179,6 +215,13 @@ const PlayerProfile = () => {
   });
   const theme = useTheme();
 
+  // Add debug logging for game reports
+  useEffect(() => {
+    console.log('Game reports updated:', gameReports);
+    const processed = processGameLogs(gameReports);
+    console.log('Processed game logs:', processed);
+  }, [gameReports]);
+
   useEffect(() => {
     fetch('/players.json')
       .then(res => {
@@ -190,7 +233,22 @@ const PlayerProfile = () => {
         setPlayer(playerObj);
         setScoutRankings(data.scoutRankings.find((r: any) => r.playerId === Number(id)) || {});
         setMeasurements(data.measurements.find((m: any) => m.playerId === Number(id)) || {});
-        setGameReports((data.game_logs || []).filter((g: any) => g.playerId === Number(id)));
+        
+        // Filter and process game logs
+        const playerGameLogs = (data.game_logs || [])
+          .filter((g: any) => g.playerId === Number(id))
+          .map((log: any) => ({
+            date: log.date,
+            pts: Number(log.pts) || 0,
+            reb: Number(log.reb) || 0,
+            ast: Number(log.ast) || 0,
+            timePlayed: log.timePlayed,
+            oreb: Number(log.oreb) || 0,
+            dreb: Number(log.dreb) || 0
+          }));
+        console.log('Filtered game logs:', playerGameLogs);
+        setGameReports(playerGameLogs);
+        
         const playerSeasonLogs = (data.seasonLogs || []).filter((log: any) => log.playerId === Number(id));
         setSeasonLogs(playerSeasonLogs);
         setSeasonTotals(playerSeasonLogs[playerSeasonLogs.length - 1] || null);
@@ -225,7 +283,7 @@ const PlayerProfile = () => {
         fullMark: 100
       },
       {
-        subject: 'Playmaking',
+        subject: 'Plays',
         value: roundToThree((seasonTotals.AST / maxValues.ast) * 100),
         fullMark: 100
       },
@@ -245,18 +303,6 @@ const PlayerProfile = () => {
         fullMark: 100
       }
     ];
-  };
-
-  // Process game logs for visualization
-  const processGameLogs = () => {
-    return gameReports.map((game, index) => ({
-      game: index + 1,
-      date: game.date ? new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `Game ${index + 1}`,
-      pts: roundToThree(game.pts || 0),
-      reb: roundToThree(game.oreb && game.dreb ? game.oreb + game.dreb : game.reb || 0),
-      ast: roundToThree(game.ast || 0),
-      min: roundToThree(game.timePlayed || 0)
-    }));
   };
 
   const handleSubmitReport = (e: React.FormEvent) => {
@@ -308,10 +354,20 @@ const PlayerProfile = () => {
         </Typography>
 
         {/* Top Section: 3-column layout */}
-        <Grid container spacing={4} alignItems="flex-start" sx={{ mb: 4 }}>
+        <Grid container spacing={3} alignItems="stretch" sx={{ mb: 4 }}>
           {/* Left: Player Image */}
-          <Grid item xs={12} md={4}>
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Paper elevation={3} sx={{
+              p: 3,
+              borderRadius: 2,
+              minHeight: 360,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'background.default',
+            }}>
               <GlowingImage
                 src={player.photoUrl}
                 alt={player.name}
@@ -320,13 +376,23 @@ const PlayerProfile = () => {
                 transition={{ duration: 0.5 }}
                 theme={theme}
               />
-            </Box>
+            </Paper>
           </Grid>
 
           {/* Middle: Player Info */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'background.default' }}>
-              <List dense>
+          <Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Paper elevation={3} sx={{
+              p: 3,
+              borderRadius: 2,
+              minHeight: 360,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'background.default',
+            }}>
+              <List dense sx={{ width: '100%' }}>
                 <ListItem>
                   <ListItemText primary={<b>Team</b>} secondary={player.currentTeam || 'N/A'} />
                 </ListItem>
@@ -347,40 +413,66 @@ const PlayerProfile = () => {
           </Grid>
 
           {/* Right: Radar Chart */}
-          <Grid item xs={12} md={4}>
-            {seasonTotals && (
-              <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'background.default', height: '100%' }}>
-                <Typography variant="h6" sx={{ mb: 2, color: theme.palette.primary.main }}>Player Attributes</Typography>
-                <Box sx={{ height: 300 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={calculateRadarData()}>
-                      <PolarGrid />
-                      <PolarAngleAxis 
-                        dataKey="subject" 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                      />
-                      <PolarRadiusAxis 
-                        angle={30} 
-                        domain={[0, 100]}
-                        tick={{ fontSize: 10 }}
-                        tickCount={5}
-                      />
-                      <Radar
-                        name="Attributes"
-                        dataKey="value"
-                        stroke={theme.palette.primary.main}
-                        fill={theme.palette.primary.main}
-                        fillOpacity={0.3}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-                  Normalized attributes based on season performance
-                </Typography>
-              </Paper>
-            )}
+          <Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Paper elevation={3} sx={{
+              p: 3,
+              borderRadius: 2,
+              minHeight: 360,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'background.default',
+            }}>
+              {seasonTotals && (
+                <>
+                  <Typography variant="h6" sx={{ mb: 2, color: theme.palette.primary.main, textAlign: 'center' }}>Player Attributes</Typography>
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: 340,
+                      minHeight: 240,
+                      maxWidth: 700,
+                      mx: 'auto',
+                      mb: 1,
+                      overflow: 'visible',
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart
+                        data={calculateRadarData()}
+                        outerRadius={90}
+                        margin={{ top: 30, right: 60, bottom: 30, left: 60 }}
+                      >
+                        <PolarGrid />
+                        <PolarAngleAxis
+                          dataKey="subject"
+                          tick={{ fontSize: 9, fill: theme.palette.text.primary, fontWeight: 600 }}
+                          tickLine={false}
+                        />
+                        <PolarRadiusAxis 
+                          angle={30} 
+                          domain={[0, 100]}
+                          tick={{ fontSize: 10 }}
+                          tickCount={5}
+                        />
+                        <Radar
+                          name="Attributes"
+                          dataKey="value"
+                          stroke={theme.palette.primary.main}
+                          fill={theme.palette.primary.main}
+                          fillOpacity={0.3}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                    Normalized attributes based on season performance
+                  </Typography>
+                </>
+              )}
+            </Paper>
           </Grid>
         </Grid>
 
@@ -483,7 +575,16 @@ const PlayerProfile = () => {
                               tick={{ fontSize: 12 }}
                               label={{ value: 'Value', angle: -90, position: 'insideLeft' }}
                             />
-                            <Tooltip />
+                            <Tooltip 
+                              formatter={(value) =>
+                                typeof value === 'number' ? value.toFixed(3) : value
+                              }
+                              contentStyle={{ 
+                                backgroundColor: theme.palette.background.paper,
+                                border: `1px solid ${theme.palette.divider}`,
+                                borderRadius: 8
+                              }}
+                            />
                             <Legend />
                             <Line type="monotone" dataKey="pts" stroke={theme.palette.primary.main} name="Points" />
                             <Line type="monotone" dataKey="trb" stroke={theme.palette.success.main} name="Rebounds" />
@@ -502,7 +603,16 @@ const PlayerProfile = () => {
                               tick={{ fontSize: 12 }}
                               label={{ value: 'Value', angle: -90, position: 'insideLeft' }}
                             />
-                            <Tooltip />
+                            <Tooltip 
+                              formatter={(value) =>
+                                typeof value === 'number' ? value.toFixed(3) : value
+                              }
+                              contentStyle={{ 
+                                backgroundColor: theme.palette.background.paper,
+                                border: `1px solid ${theme.palette.divider}`,
+                                borderRadius: 8
+                              }}
+                            />
                             <Bar 
                               dataKey="value" 
                               fill={theme.palette.primary.main}
@@ -542,7 +652,7 @@ const PlayerProfile = () => {
                     <Checkbox
                       checked={visibleStats.pts}
                       onChange={(e) => setVisibleStats(prev => ({ ...prev, pts: e.target.checked }))}
-                      sx={{ color: theme.palette.primary.main }}
+                      sx={{ color: '#0053BC' }}
                     />
                   }
                   label="Points"
@@ -580,22 +690,31 @@ const PlayerProfile = () => {
               </StatToggleGroup>
 
               {/* Game Performance Chart */}
-              <Box sx={{ height: 400, mb: 4 }}>
+              <Box sx={{ height: 400, mb: 4, position: 'relative' }}>
+                {processGameLogs(gameReports).length <= 1 && (
+                  <Typography sx={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%, -50%)', color: theme.palette.text.secondary, zIndex: 2 }}>
+                    {processGameLogs(gameReports).length === 0 ? 'No game logs available for this player.' : 'Only one game log available for this player.'}
+                  </Typography>
+                )}
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={processGameLogs()}>
+                  <LineChart key={JSON.stringify(processGameLogs(gameReports))} data={processGameLogs(gameReports)}>
                     <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                     <XAxis 
                       dataKey="date" 
                       tick={{ fontSize: 12 }}
                       tickLine={false}
-                      axisLine={{ stroke: theme.palette.primary.main }}
+                      axisLine={{ stroke: '#0053BC' }}
                     />
                     <YAxis 
+                      domain={['auto', 'auto']}
                       tick={{ fontSize: 12 }}
                       tickLine={false}
-                      axisLine={{ stroke: theme.palette.primary.main }}
+                      axisLine={{ stroke: '#0053BC' }}
                     />
                     <Tooltip 
+                      formatter={(value) =>
+                        typeof value === 'number' ? value.toFixed(3) : value
+                      }
                       contentStyle={{ 
                         backgroundColor: theme.palette.background.paper,
                         border: `1px solid ${theme.palette.divider}`,
@@ -603,52 +722,50 @@ const PlayerProfile = () => {
                       }}
                     />
                     <Legend />
-                    <AnimatePresence>
-                      {visibleStats.pts && (
-                        <Line 
-                          type="monotone" 
-                          dataKey="pts" 
-                          stroke={theme.palette.primary.main} 
-                          name="Points"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      )}
-                      {visibleStats.reb && (
-                        <Line 
-                          type="monotone" 
-                          dataKey="reb" 
-                          stroke={theme.palette.success.main} 
-                          name="Rebounds"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      )}
-                      {visibleStats.ast && (
-                        <Line 
-                          type="monotone" 
-                          dataKey="ast" 
-                          stroke={theme.palette.info.main} 
-                          name="Assists"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      )}
-                      {visibleStats.min && (
-                        <Line 
-                          type="monotone" 
-                          dataKey="min" 
-                          stroke={theme.palette.secondary.main} 
-                          name="Minutes"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      )}
-                    </AnimatePresence>
+                    {visibleStats.pts && (
+                      <Line 
+                        type="monotone" 
+                        dataKey="pts" 
+                        stroke="#0053BC" 
+                        name="Points"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    )}
+                    {visibleStats.reb && (
+                      <Line 
+                        type="monotone" 
+                        dataKey="reb" 
+                        stroke={theme.palette.success.main} 
+                        name="Rebounds"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    )}
+                    {visibleStats.ast && (
+                      <Line 
+                        type="monotone" 
+                        dataKey="ast" 
+                        stroke={theme.palette.info.main} 
+                        name="Assists"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    )}
+                    {visibleStats.min && (
+                      <Line 
+                        type="monotone" 
+                        dataKey="min" 
+                        stroke={theme.palette.secondary.main} 
+                        name="Minutes"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </Box>
@@ -678,22 +795,22 @@ const PlayerProfile = () => {
                       return [
                         {
                           stat: 'PPG',
-                          value: averages.ppg,
+                          value: typeof averages.ppg === 'number' ? averages.ppg.toFixed(3) : '—',
                           desc: 'Points per game'
                         },
                         {
                           stat: 'RPG',
-                          value: averages.rpg,
+                          value: typeof averages.rpg === 'number' ? averages.rpg.toFixed(3) : '—',
                           desc: 'Rebounds per game'
                         },
                         {
                           stat: 'APG',
-                          value: averages.apg,
+                          value: typeof averages.apg === 'number' ? averages.apg.toFixed(3) : '—',
                           desc: 'Assists per game'
                         },
                         {
                           stat: 'MPG',
-                          value: averages.mpg,
+                          value: typeof averages.mpg === 'number' ? averages.mpg.toFixed(3) : '—',
                           desc: 'Minutes per game'
                         }
                       ].map((row) => (
@@ -706,7 +823,7 @@ const PlayerProfile = () => {
                           }}
                         >
                           <TableCell sx={{ fontWeight: 600 }}>{row.stat}</TableCell>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem', color: theme.palette.primary.main }}>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#0053BC' }}>
                             {row.value}
                           </TableCell>
                           <TableCell sx={{ color: theme.palette.text.secondary }}>
