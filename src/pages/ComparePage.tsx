@@ -140,7 +140,7 @@ const ComparePage = () => {
         transition={{ duration: 0.3 }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#fff' }}>
             Compare Players
           </Typography>
         </Box>

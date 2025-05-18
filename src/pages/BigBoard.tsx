@@ -112,7 +112,7 @@ const BigBoard = () => {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, md: 4 } }}>
-      <Typography variant="h3" sx={{ fontWeight: 700, mb: 3, textAlign: 'left' }}>
+      <Typography variant="h3" sx={{ fontWeight: 700, mb: 3, textAlign: 'left', color: '#fff' }}>
         Mavericks Big Board
       </Typography>
       

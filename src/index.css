@@ -79,3 +79,13 @@ button:focus-visible {
   transition: left 0.13s cubic-bezier(.4,1.7,.7,1), top 0.13s cubic-bezier(.4,1.7,.7,1);
   will-change: left, top;
 }
+
+/* Hero background for home page */
+.bg-mavs-hero {
+  background: url('/bg.png') center/cover no-repeat fixed;
+}
+
+/* Court background for Big Board and Compare Players */
+.bg-court {
+  background: url('/court.png') center/cover no-repeat fixed;
+}
