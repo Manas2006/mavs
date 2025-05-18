@@ -15,42 +15,37 @@ import { motion } from 'framer-motion';
 interface Player {
   playerId: number;
   name: string;
-  scoutRankings?: {
-    'ESPN Rank'?: number;
-    'Sam Vecenie Rank'?: number;
-    'Kevin O\'Connor Rank'?: number;
-    'Kyle Boone Rank'?: number;
-    'Gary Parrish Rank'?: number;
+  measurements?: {
+    height?: number;
+    weight?: number;
+    wingspan?: number;
+    standingReach?: number;
+    verticalLeap?: number;
+    benchPress?: number;
   };
 }
 
-interface ScoutRankingsTableProps {
+interface MeasurementsChartProps {
   players: Player[];
   colors: string[];
 }
 
-const ScoutRankingsTable = ({ players, colors }: ScoutRankingsTableProps) => {
+const MeasurementsChart = ({ players, colors }: MeasurementsChartProps) => {
   const theme = useTheme();
 
-  const scouts = [
-    { key: 'ESPN Rank', label: 'ESPN' },
-    { key: 'Sam Vecenie Rank', label: 'Sam Vecenie' },
-    { key: 'Kevin O\'Connor Rank', label: 'Kevin O\'Connor' },
-    { key: 'Kyle Boone Rank', label: 'Kyle Boone' },
-    { key: 'Gary Parrish Rank', label: 'Gary Parrish' }
+  const measurements = [
+    { key: 'height', label: 'Height', unit: 'in', format: (value?: number) => value ? `${Math.floor(value / 12)}'${value % 12}"` : 'N/A' },
+    { key: 'weight', label: 'Weight', unit: 'lbs', format: (value?: number) => value ? `${value} lbs` : 'N/A' },
+    { key: 'wingspan', label: 'Wingspan', unit: 'in', format: (value?: number) => value ? `${value}"` : 'N/A' },
+    { key: 'standingReach', label: 'Standing Reach', unit: 'in', format: (value?: number) => value ? `${value}"` : 'N/A' },
+    { key: 'verticalLeap', label: 'Vertical Leap', unit: 'in', format: (value?: number) => value ? `${value}"` : 'N/A' },
+    { key: 'benchPress', label: 'Bench Press', unit: 'reps', format: (value?: number) => value ? `${value}` : 'N/A' }
   ];
 
-  const calculateAverageRank = (player: Player) => {
-    const rankings = Object.values(player.scoutRankings || {})
-      .filter((rank): rank is number => rank !== undefined && rank !== null);
-    if (rankings.length === 0) return 'N/A';
-    return (rankings.reduce((sum, rank) => sum + rank, 0) / rankings.length).toFixed(1);
-  };
-
-  const findBestRank = (values: (number | undefined | null)[]) => {
-    const validValues = values.filter((v): v is number => v !== undefined && v !== null);
+  const findBestValue = (values: (number | undefined)[]) => {
+    const validValues = values.filter((v): v is number => v !== undefined);
     if (validValues.length === 0) return -1;
-    return values.indexOf(Math.min(...validValues));
+    return values.indexOf(Math.max(...validValues));
   };
 
   return (
@@ -80,13 +75,13 @@ const ScoutRankingsTable = ({ players, colors }: ScoutRankingsTableProps) => {
         }}
       >
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, position: 'relative', zIndex: 1 }}>
-          Scout Rankings Comparison
+          Physical Measurements Comparison
         </Typography>
         <TableContainer sx={{ position: 'relative', zIndex: 1 }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Scout</TableCell>
+                <TableCell>Measurement</TableCell>
                 {players.map((player, index) => (
                   <TableCell
                     key={player.playerId}
@@ -101,18 +96,18 @@ const ScoutRankingsTable = ({ players, colors }: ScoutRankingsTableProps) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {scouts.map((scout) => {
-                const values = players.map(p => p.scoutRankings?.[scout.key as keyof typeof p.scoutRankings]);
-                const bestIndex = findBestRank(values);
+              {measurements.map((measurement) => {
+                const values = players.map(p => p.measurements?.[measurement.key as keyof typeof p.measurements]);
+                const bestIndex = findBestValue(values);
                 
                 return (
-                  <TableRow key={scout.key}>
+                  <TableRow key={measurement.key}>
                     <TableCell
                       component="th"
                       scope="row"
                       sx={{ fontWeight: 600 }}
                     >
-                      {scout.label}
+                      {measurement.label}
                     </TableCell>
                     {players.map((player, index) => (
                       <TableCell
@@ -123,32 +118,12 @@ const ScoutRankingsTable = ({ players, colors }: ScoutRankingsTableProps) => {
                           backgroundColor: index === bestIndex ? `${colors[index]}15` : 'transparent'
                         }}
                       >
-                        {player.scoutRankings?.[scout.key as keyof typeof player.scoutRankings] || 'N/A'}
+                        {measurement.format(player.measurements?.[measurement.key as keyof typeof player.measurements])}
                       </TableCell>
                     ))}
                   </TableRow>
                 );
               })}
-              <TableRow>
-                <TableCell
-                  component="th"
-                  scope="row"
-                  sx={{ fontWeight: 600 }}
-                >
-                  Average Rank
-                </TableCell>
-                {players.map((player, index) => (
-                  <TableCell
-                    key={player.playerId}
-                    sx={{
-                      color: colors[index],
-                      fontWeight: 600
-                    }}
-                  >
-                    {calculateAverageRank(player)}
-                  </TableCell>
-                ))}
-              </TableRow>
             </TableBody>
           </Table>
         </TableContainer>
@@ -157,4 +132,4 @@ const ScoutRankingsTable = ({ players, colors }: ScoutRankingsTableProps) => {
   );
 };
 
-export default ScoutRankingsTable; 
+export default MeasurementsChart; 
