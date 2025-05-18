@@ -191,7 +191,6 @@ const PlayerProfile = () => {
   const [measurements, setMeasurements] = useState<any>({});
   const [gameReports, setGameReports] = useState<any[]>([]);
   const [seasonLogs, setSeasonLogs] = useState<any[]>([]);
-  const [seasonTotals, setSeasonTotals] = useState<any | null>(null);
   const [scoutReports, setScoutReports] = useState<any[]>([]);
   const [newReport, setNewReport] = useState({ notes: '', rating: 5 });
   const [visibleStats, setVisibleStats] = useState({
@@ -227,17 +226,27 @@ const PlayerProfile = () => {
           .find((r: any) => String(r.playerId) === String(id)) || {};
 
         if (playerBio) {
+          // Calculate season averages for the radar chart
+          const seasonStats = playerSeasonLogs.length > 0 ? {
+            PTS: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.PTS) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            TRB: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.TRB) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            AST: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.AST) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            BLK: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.BLK) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            STL: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.STL) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            MP: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.MP) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            'eFG%': Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log['eFG%']) || 0), 0) / playerSeasonLogs.length).toFixed(1))
+          } : {
+            PTS: 0,
+            TRB: 0,
+            AST: 0,
+            BLK: 0,
+            STL: 0,
+            MP: 0,
+            'eFG%': 0
+          };
           setPlayer({
             ...playerBio,
-            seasonStats: playerSeasonLogs.map((log: any) => ({
-              PTS: log.PTS || 0,
-              TRB: log.TRB || 0,
-              AST: log.AST || 0,
-              BLK: log.BLK || 0,
-              STL: log.STL || 0,
-              MP: log.MP || 0,
-              'eFG%': log['eFG%'] || 0
-            })),
+            seasonStats,
             measurements: {
               height: measurements.height,
               weight: measurements.weight,
@@ -404,7 +413,7 @@ const PlayerProfile = () => {
               justifyContent: 'center',
               bgcolor: 'background.default',
             }}>
-              {player && player.seasonStats && player.seasonStats.length > 0 && (
+              {player && player.seasonStats && player.seasonStats.PTS !== '0' && (
                 <>
                   <Typography variant="h6" sx={{ mb: 2, color: theme.palette.primary.main, textAlign: 'center' }}>Player Attributes</Typography>
                   <Box

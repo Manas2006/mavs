@@ -2,13 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Grid,
-  Paper,
   Typography,
   Box,
   useTheme,
   CircularProgress,
-  Alert,
-  Button
+  Alert
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import type { Player } from '../types/player';
@@ -112,16 +110,6 @@ const ComparePage = () => {
     fetchPlayers();
   }, []);
 
-  const handleRandomize = () => {
-    const availablePlayers = players.filter(
-      p => !selectedPlayers.some(sp => sp.playerId === p.playerId)
-    );
-    const randomPlayers = [...availablePlayers]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 4 - selectedPlayers.length);
-    setSelectedPlayers([...selectedPlayers, ...randomPlayers]);
-  };
-
   if (loading) {
     return (
       <Box
@@ -188,7 +176,6 @@ const ComparePage = () => {
             {/* Performance Podium */}
             <PerformancePodium
               players={selectedPlayers}
-              colors={colors}
             />
 
             {/* Radar Chart */}

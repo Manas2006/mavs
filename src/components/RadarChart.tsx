@@ -83,7 +83,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ players, colors }) => {
                 <Box sx={{ height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsRadarChart
-                      data={calculatePlayerAttributes(player)}
+                      data={calculatePlayerAttributes({ ...player, seasonStats: player.seasonStats || {} } as Player & { seasonStats: Record<string, number> })}
                       outerRadius={90}
                       margin={{ top: 30, right: 60, bottom: 30, left: 60 }}
                     >

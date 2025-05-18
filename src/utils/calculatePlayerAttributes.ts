@@ -4,15 +4,6 @@ const roundToThree = (num: number): number => {
   return Math.round(num * 1000) / 1000;
 };
 
-interface SeasonStats {
-  PTS: number;
-  AST: number;
-  TRB: number;
-  BLK: number;
-  STL: number;
-  'eFG%': number;
-}
-
 export const calculatePlayerAttributes = (player: Player & { seasonStats: Record<string, number> }) => {
   if (!player.seasonStats) return [];
 
