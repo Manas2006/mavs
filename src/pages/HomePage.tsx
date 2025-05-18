@@ -44,7 +44,6 @@ const PulsingButton = styled(motion(Link))`
 `;
 
 const HomePage = () => {
-  const theme = useTheme();
 
   return (
     <Box
