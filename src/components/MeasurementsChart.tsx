@@ -8,7 +8,6 @@ import {
   TableRow,
   Typography,
   useTheme,
-  Box
 } from '@mui/material';
 import { motion } from 'framer-motion';
 

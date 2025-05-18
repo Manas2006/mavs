@@ -36,8 +36,8 @@ const SeasonStatsChart = ({ players, colors }: SeasonStatsChartProps) => {
 
   const data = stats.map(stat => {
     const entry: any = { name: stat.label };
-    players.forEach((player, index) => {
-      entry[`player${index}`] = player.seasonStats?.[stat.key] || 0;
+    players.forEach((player) => {
+      entry[`player${player.playerId}`] = player.seasonStats?.[stat.key] || 0;
     });
     return entry;
   });
@@ -159,9 +159,9 @@ const SeasonStatsChart = ({ players, colors }: SeasonStatsChartProps) => {
               {players.map((player, index) => (
                 <Bar
                   key={player.playerId}
-                  dataKey={`player${index}`}
+                  dataKey={`player${player.playerId}`}
                   name={player.name}
-                  fill={colors[index]}
+                  fill={colors[index % colors.length]}
                   radius={[0, 4, 4, 0]}
                   animationDuration={1000}
                 />

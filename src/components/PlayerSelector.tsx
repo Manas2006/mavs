@@ -132,7 +132,6 @@ const PlayerSelector = ({
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
                 <Chip
-                  key={option.playerId}
                   label={option.name}
                   {...getTagProps({ index })}
                   sx={{
