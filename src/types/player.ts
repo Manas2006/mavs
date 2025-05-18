@@ -15,4 +15,6 @@ export interface Player {
     'Kyle Boone Rank'?: number;
     'Gary Parrish Rank'?: number;
   };
+  league?: string;
+  leagueType?: string;
 } 

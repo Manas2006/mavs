@@ -18,6 +18,7 @@ import SeasonStatsChart from '../components/SeasonStatsChart';
 import MeasurementsChart from '../components/MeasurementsChart';
 import ScoutRankingsTable from '../components/ScoutRankingsTable';
 import RadarChart from '../components/RadarChart';
+import PerformancePodium from '../components/PerformancePodium';
 
 const ComparePage = () => {
   const theme = useTheme();
@@ -53,6 +54,25 @@ const ComparePage = () => {
           const scoutRankings = data.scoutRankings
             .find((r: any) => r.playerId === player.playerId) || {};
 
+          // Calculate season averages
+          const seasonStats = playerSeasonLogs.length > 0 ? {
+            PTS: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.PTS) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            TRB: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.TRB) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            AST: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.AST) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            BLK: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.BLK) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            STL: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.STL) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            MP: Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log.MP) || 0), 0) / playerSeasonLogs.length).toFixed(1)),
+            'eFG%': Number((playerSeasonLogs.reduce((sum: number, log: any) => sum + (Number(log['eFG%']) || 0), 0) / playerSeasonLogs.length).toFixed(1))
+          } : {
+            PTS: 0,
+            TRB: 0,
+            AST: 0,
+            BLK: 0,
+            STL: 0,
+            MP: 0,
+            'eFG%': 0
+          };
+
           return {
             playerId: player.playerId,
             name: player.name,
@@ -62,15 +82,7 @@ const ComparePage = () => {
             weight: player.weight,
             photoUrl: player.photoUrl,
             headshot: player.headshot,
-            seasonStats: playerSeasonLogs.map((log: any) => ({
-              PTS: log.PTS || 0,
-              TRB: log.TRB || 0,
-              AST: log.AST || 0,
-              BLK: log.BLK || 0,
-              STL: log.STL || 0,
-              MP: log.MP || 0,
-              'eFG%': log['eFG%'] || 0
-            })),
+            seasonStats,
             measurements: {
               height: measurements.height,
               weight: measurements.weight,
@@ -169,6 +181,12 @@ const ComparePage = () => {
 
             {/* Season Stats Chart */}
             <SeasonStatsChart
+              players={selectedPlayers}
+              colors={colors}
+            />
+
+            {/* Performance Podium */}
+            <PerformancePodium
               players={selectedPlayers}
               colors={colors}
             />

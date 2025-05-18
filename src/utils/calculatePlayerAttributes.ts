@@ -13,9 +13,9 @@ interface SeasonStats {
   'eFG%': number;
 }
 
-export const calculatePlayerAttributes = (player: Player & { seasonStats: SeasonStats[] }) => {
+export const calculatePlayerAttributes = (player: Player & { seasonStats: Record<string, number> }) => {
   if (!player.seasonStats) return [];
-  
+
   const maxValues = {
     pts: 30,
     ast: 10,
@@ -24,15 +24,15 @@ export const calculatePlayerAttributes = (player: Player & { seasonStats: Season
     efficiency: 100
   };
 
-  // Calculate averages across all seasons
-  const totalSeasons = player.seasonStats.length || 1;
+  // Use the seasonStats object directly
+  const stats = player.seasonStats;
   const averages = {
-    PTS: player.seasonStats.reduce((sum: number, season: SeasonStats) => sum + (season.PTS || 0), 0) / totalSeasons,
-    AST: player.seasonStats.reduce((sum: number, season: SeasonStats) => sum + (season.AST || 0), 0) / totalSeasons,
-    TRB: player.seasonStats.reduce((sum: number, season: SeasonStats) => sum + (season.TRB || 0), 0) / totalSeasons,
-    BLK: player.seasonStats.reduce((sum: number, season: SeasonStats) => sum + (season.BLK || 0), 0) / totalSeasons,
-    STL: player.seasonStats.reduce((sum: number, season: SeasonStats) => sum + (season.STL || 0), 0) / totalSeasons,
-    'eFG%': player.seasonStats.reduce((sum: number, season: SeasonStats) => sum + (season['eFG%'] || 0), 0) / totalSeasons
+    PTS: stats.PTS || 0,
+    AST: stats.AST || 0,
+    TRB: stats.TRB || 0,
+    BLK: stats.BLK || 0,
+    STL: stats.STL || 0,
+    'eFG%': stats['eFG%'] || 0
   };
 
   return [
