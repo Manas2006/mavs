@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, BarChart, Bar } from 'recharts';
 import styled from '@emotion/styled';
+import { calculatePlayerAttributes } from '../utils/calculatePlayerAttributes';
 
 // Styled components
 const GlowingImage = styled(motion.img)<{ theme: Theme }>`
@@ -209,87 +210,79 @@ const PlayerProfile = () => {
   }, [gameReports]);
 
   useEffect(() => {
-    fetch('/players.json')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load players.json');
-        return res.json();
-      })
-      .then(data => {
-        const playerObj = data.bio.find((p: any) => p.playerId === Number(id));
-        setPlayer(playerObj);
-        setScoutRankings(data.scoutRankings.find((r: any) => r.playerId === Number(id)) || {});
-        setMeasurements(data.measurements.find((m: any) => m.playerId === Number(id)) || {});
+    const fetchPlayerData = async () => {
+      try {
+        const response = await fetch('/players.json');
+        if (!response.ok) {
+          throw new Error('Failed to fetch player data');
+        }
+        const data = await response.json();
         
-        // Filter and process game logs
-        const playerGameLogs = (data.game_logs || [])
-          .filter((g: any) => g.playerId === Number(id))
-          .map((log: any) => ({
-            date: log.date,
-            pts: Number(log.pts) || 0,
-            reb: Number(log.reb) || 0,
-            ast: Number(log.ast) || 0,
-            timePlayed: log.timePlayed,
-            oreb: Number(log.oreb) || 0,
-            dreb: Number(log.dreb) || 0
-          }));
-        console.log('Filtered game logs:', playerGameLogs);
-        setGameReports(playerGameLogs);
-        
-        const playerSeasonLogs = (data.seasonLogs || []).filter((log: any) => log.playerId === Number(id));
-        setSeasonLogs(playerSeasonLogs);
-        setSeasonTotals(playerSeasonLogs[playerSeasonLogs.length - 1] || null);
-        setScoutReports((data.scoutingReports || []).filter((r: any) => r.playerId === Number(id)));
+        const playerBio = data.bio.find((p: any) => String(p.playerId) === String(id));
+        const playerSeasonLogs = data.seasonLogs
+          .filter((log: any) => String(log.playerId) === String(id));
+        const measurements = data.measurements
+          .find((m: any) => String(m.playerId) === String(id)) || {};
+        const scoutRankings = data.scoutRankings
+          .find((r: any) => String(r.playerId) === String(id)) || {};
+
+        if (playerBio) {
+          setPlayer({
+            ...playerBio,
+            seasonStats: playerSeasonLogs.map((log: any) => ({
+              PTS: log.PTS || 0,
+              TRB: log.TRB || 0,
+              AST: log.AST || 0,
+              BLK: log.BLK || 0,
+              STL: log.STL || 0,
+              MP: log.MP || 0,
+              'eFG%': log['eFG%'] || 0
+            })),
+            measurements: {
+              height: measurements.height,
+              weight: measurements.weight,
+              wingspan: measurements.wingspan,
+              standingReach: measurements.standingReach,
+              verticalLeap: measurements.verticalLeap,
+              benchPress: measurements.benchPress
+            },
+            scoutRankings: {
+              'ESPN Rank': scoutRankings['ESPN Rank'],
+              'Sam Vecenie Rank': scoutRankings['Sam Vecenie Rank'],
+              'Kevin O\'Connor Rank': scoutRankings['Kevin O\'Connor Rank'],
+              'Kyle Boone Rank': scoutRankings['Kyle Boone Rank'],
+              'Gary Parrish Rank': scoutRankings['Gary Parrish Rank']
+            }
+          });
+          setScoutRankings(scoutRankings);
+          setMeasurements(measurements);
+          setSeasonLogs(playerSeasonLogs);
+          setGameReports(
+            (data.game_logs || [])
+              .filter((g: any) => g.playerId === Number(id))
+              .map((log: any) => ({
+                date: log.date,
+                pts: Number(log.pts) || 0,
+                reb: Number(log.reb) || 0,
+                ast: Number(log.ast) || 0,
+                timePlayed: log.timePlayed,
+                oreb: Number(log.oreb) || 0,
+                dreb: Number(log.dreb) || 0
+              }))
+          );
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchPlayerData();
   }, [id]);
 
   // Process chart data
   const chartData = processSeasonData(seasonLogs);
-
-  // Calculate radar chart data
-  const calculateRadarData = () => {
-    if (!seasonTotals) return [];
-    
-    const maxValues = {
-      pts: 30,
-      ast: 10,
-      trb: 15,
-      defense: 5,
-      efficiency: 100
-    };
-
-    return [
-      {
-        subject: 'Scoring',
-        value: roundToThree((seasonTotals.PTS / maxValues.pts) * 100),
-        fullMark: 100
-      },
-      {
-        subject: 'Plays',
-        value: roundToThree((seasonTotals.AST / maxValues.ast) * 100),
-        fullMark: 100
-      },
-      {
-        subject: 'Rebounding',
-        value: roundToThree((seasonTotals.TRB / maxValues.trb) * 100),
-        fullMark: 100
-      },
-      {
-        subject: 'Defense',
-        value: roundToThree((((seasonTotals.BLK || 0) + (seasonTotals.STL || 0)) / maxValues.defense) * 100),
-        fullMark: 100
-      },
-      {
-        subject: 'Efficiency',
-        value: roundToThree(seasonTotals['eFG%'] || 0),
-        fullMark: 100
-      }
-    ];
-  };
 
   const handleSubmitReport = (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,7 +404,7 @@ const PlayerProfile = () => {
               justifyContent: 'center',
               bgcolor: 'background.default',
             }}>
-              {seasonTotals && (
+              {player && player.seasonStats && player.seasonStats.length > 0 && (
                 <>
                   <Typography variant="h6" sx={{ mb: 2, color: theme.palette.primary.main, textAlign: 'center' }}>Player Attributes</Typography>
                   <Box
@@ -427,7 +420,7 @@ const PlayerProfile = () => {
                   >
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart
-                        data={calculateRadarData()}
+                        data={calculatePlayerAttributes(player)}
                         outerRadius={90}
                         margin={{ top: 30, right: 60, bottom: 30, left: 60 }}
                       >
@@ -440,8 +433,8 @@ const PlayerProfile = () => {
                         <PolarRadiusAxis 
                           angle={30} 
                           domain={[0, 100]}
-                          tick={{ fontSize: 10 }}
-                          tickCount={5}
+                          tick={false}
+                          axisLine={false}
                         />
                         <Radar
                           name="Attributes"
@@ -449,6 +442,17 @@ const PlayerProfile = () => {
                           stroke={theme.palette.primary.main}
                           fill={theme.palette.primary.main}
                           fillOpacity={0.3}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: theme.palette.background.paper,
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: 8
+                          }}
+                          formatter={(value: number, name: string) => [
+                            `${value.toFixed(1)}%`,
+                            name
+                          ]}
                         />
                       </RadarChart>
                     </ResponsiveContainer>
@@ -481,19 +485,18 @@ const PlayerProfile = () => {
                     <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>Scout Rankings</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                       {(() => {
-                        const entries = Object.entries(scoutRankings).filter(([k]) => k !== 'playerId');
+                        const entries = Object.entries(scoutRankings)
+                          .filter(([k, v]) => k !== 'playerId' && v !== undefined && v !== null && v !== '');
                         const values = entries.filter(([_, v]) => typeof v === 'number').map(([_, v]) => v as number);
                         const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
                         
-                        // First show all rankings
-                        const rankings = entries.map(([scout, rank]) => {
+                        const filteredRankings = entries.map(([scout, rank]) => {
                           if (typeof rank !== 'number') return null;
                           const diff = avg !== null ? rank - avg : 0;
                           let color: 'success' | 'error' | 'default' = 'default';
-                          // Only show colors if we have enough rankings
                           if (values.length >= 3) {
-                            if (diff <= -3) color = 'success';
-                            if (diff >= 3) color = 'error';
+                            if (diff <= -3) color = 'success'; // green for below avg
+                            if (diff >= 3) color = 'error';   // red for above avg
                           }
                           const showTooltip = color === 'success' || color === 'error';
                           const tooltipText = diff > 0
@@ -529,18 +532,15 @@ const PlayerProfile = () => {
                               ) : badge}
                             </Box>
                           );
-                        });
-
-                        // Then show variance message if not enough data
-                        if (values.length < 3) {
-                          rankings.push(
+                        }).filter(Boolean);
+                        if (values.length < 3 && filteredRankings.length > 0) {
+                          filteredRankings.push(
                             <Typography key="variance-message" variant="body2" color="text.secondary" sx={{ width: '100%', mt: 1 }}>
                               Not enough scout rankings to show variance.
                             </Typography>
                           );
                         }
-
-                        return rankings;
+                        return filteredRankings;
                       })()}
                     </Box>
                   </Paper>
@@ -550,14 +550,26 @@ const PlayerProfile = () => {
                     <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>Measurements</Typography>
                     <Grid container spacing={2}>
                       {Object.entries(measurements)
-                        .filter(([k]) => k !== 'playerId')
+                        .filter(([key, value]) => key !== 'playerId' && value !== undefined && value !== null && value !== '')
                         .map(([key, value]) => (
                           <Grid item xs={6} key={key}>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                               {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}:
                             </Typography>
                             <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
-                              {String(value !== undefined && value !== null ? value : '-')}
+                              {(() => {
+                                if (key === 'height') {
+                                  const inches = Number(value);
+                                  if (!isNaN(inches) && inches > 0) {
+                                    const feet = Math.floor(inches / 12);
+                                    const inch = inches % 12;
+                                    const cm = Math.round(inches * 2.54);
+                                    return `${feet}'${inch}" (${cm} cm)`;
+                                  }
+                                  return String(value);
+                                }
+                                return String(value);
+                              })()}
                             </Typography>
                           </Grid>
                         ))}

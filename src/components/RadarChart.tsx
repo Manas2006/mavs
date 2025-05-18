@@ -5,10 +5,12 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Tooltip
 } from 'recharts';
 import { motion } from 'framer-motion';
 import type { Player } from '../types/player';
+import { calculatePlayerAttributes } from '../utils/calculatePlayerAttributes';
 
 interface RadarChartProps {
   players: Player[];
@@ -17,51 +19,6 @@ interface RadarChartProps {
 
 const RadarChart: React.FC<RadarChartProps> = ({ players, colors }) => {
   const theme = useTheme();
-
-  const attributes = [
-    { key: 'scoring', label: 'Scoring', stats: ['PTS', 'FG%', '3P%'] },
-    { key: 'defense', label: 'Defense', stats: ['BLK', 'STL', 'DRB'] },
-    { key: 'playmaking', label: 'Playmaking', stats: ['AST', 'TOV'] },
-    { key: 'efficiency', label: 'Efficiency', stats: ['TS%', 'eFG%'] },
-    { key: 'rebounding', label: 'Rebounding', stats: ['TRB', 'ORB'] }
-  ];
-
-  const normalizeValue = (value: number, max: number) => {
-    return Math.min(Math.max(value / max, 0), 1);
-  };
-
-  const calculateAttributeScore = (player: Player, stats: string[]) => {
-    if (!player.seasonStats) return 0;
-    
-    const values = stats.map(stat => {
-      const value = player.seasonStats?.[stat] || 0;
-      // Define max values for each stat type
-      const maxValues: Record<string, number> = {
-        PTS: 30,
-        FG: 0.7,
-        '3P': 0.5,
-        BLK: 5,
-        STL: 3,
-        DRB: 15,
-        AST: 10,
-        TOV: 5,
-        TS: 0.7,
-        eFG: 0.7,
-        TRB: 15,
-        ORB: 8
-      };
-      return normalizeValue(value, maxValues[stat] || 1);
-    });
-    
-    return values.reduce((sum, val) => sum + val, 0) / values.length;
-  };
-
-  const generateRadarData = (player: Player) => {
-    return attributes.map(attr => ({
-      name: attr.label,
-      value: calculateAttributeScore(player, attr.stats)
-    }));
-  };
 
   return (
     <motion.div
@@ -74,17 +31,20 @@ const RadarChart: React.FC<RadarChartProps> = ({ players, colors }) => {
           p: 3,
           borderRadius: 2,
           position: 'relative',
-          '&::after': {
+          overflow: 'hidden',
+          '&::before': {
             content: '""',
             position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: 200,
-            height: 200,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '100%',
+            height: '100%',
             backgroundImage: 'url(/mavs-logo.png)',
             backgroundSize: 'contain',
+            backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            opacity: 0.05,
+            opacity: 0.03,
             zIndex: 0
           }
         }}
@@ -101,10 +61,11 @@ const RadarChart: React.FC<RadarChartProps> = ({ players, colors }) => {
                   borderRadius: 2,
                   height: '100%',
                   border: `2px solid ${colors[index]}`,
-                  transition: 'transform 0.2s ease-in-out',
+                  transition: 'all 0.2s ease-in-out',
+                  boxShadow: `0 4px 12px ${colors[index]}20`,
                   '&:hover': {
                     transform: 'translateY(-4px)',
-                    boxShadow: `0 4px 20px ${colors[index]}40`
+                    boxShadow: `0 8px 24px ${colors[index]}40`
                   }
                 }}
               >
@@ -122,18 +83,25 @@ const RadarChart: React.FC<RadarChartProps> = ({ players, colors }) => {
                 <Box sx={{ height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsRadarChart
-                      data={generateRadarData(player)}
-                      margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                      data={calculatePlayerAttributes(player)}
+                      outerRadius={90}
+                      margin={{ top: 30, right: 60, bottom: 30, left: 60 }}
                     >
                       <PolarGrid stroke={theme.palette.divider} />
                       <PolarAngleAxis
-                        dataKey="name"
-                        tick={{ fill: theme.palette.text.primary }}
+                        dataKey="subject"
+                        tick={{ 
+                          fontSize: 9,
+                          fill: theme.palette.text.primary,
+                          fontWeight: 600
+                        }}
+                        tickLine={false}
                       />
                       <PolarRadiusAxis
                         angle={30}
-                        domain={[0, 1]}
-                        tick={{ fill: theme.palette.text.primary }}
+                        domain={[0, 100]}
+                        tick={false}
+                        axisLine={false}
                       />
                       <Radar
                         name={player.name}
@@ -142,6 +110,17 @@ const RadarChart: React.FC<RadarChartProps> = ({ players, colors }) => {
                         fill={colors[index]}
                         fillOpacity={0.3}
                         animationDuration={1000}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`,
+                          borderRadius: 8
+                        }}
+                        formatter={(value: number, name: string) => [
+                          `${value.toFixed(1)}%`,
+                          name
+                        ]}
                       />
                     </RechartsRadarChart>
                   </ResponsiveContainer>

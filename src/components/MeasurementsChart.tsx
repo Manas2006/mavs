@@ -34,18 +34,24 @@ const MeasurementsChart = ({ players, colors }: MeasurementsChartProps) => {
   const theme = useTheme();
 
   const measurements = [
-    { key: 'height', label: 'Height', unit: 'in', format: (value?: number) => value ? `${Math.floor(value / 12)}'${value % 12}"` : 'N/A' },
-    { key: 'weight', label: 'Weight', unit: 'lbs', format: (value?: number) => value ? `${value} lbs` : 'N/A' },
-    { key: 'wingspan', label: 'Wingspan', unit: 'in', format: (value?: number) => value ? `${value}"` : 'N/A' },
-    { key: 'standingReach', label: 'Standing Reach', unit: 'in', format: (value?: number) => value ? `${value}"` : 'N/A' },
-    { key: 'verticalLeap', label: 'Vertical Leap', unit: 'in', format: (value?: number) => value ? `${value}"` : 'N/A' },
-    { key: 'benchPress', label: 'Bench Press', unit: 'reps', format: (value?: number) => value ? `${value}` : 'N/A' }
+    { key: 'height', label: 'Height', unit: 'in', format: (value?: number) => value ? `${Math.floor(value / 12)}'${value % 12}"` : null },
+    { key: 'weight', label: 'Weight', unit: 'lbs', format: (value?: number) => value ? `${value} lbs` : null },
+    { key: 'wingspan', label: 'Wingspan', unit: 'in', format: (value?: number) => value ? `${value}"` : null },
+    { key: 'standingReach', label: 'Standing Reach', unit: 'in', format: (value?: number) => value ? `${value}"` : null },
+    { key: 'verticalLeap', label: 'Vertical Leap', unit: 'in', format: (value?: number) => value ? `${value}"` : null },
+    { key: 'benchPress', label: 'Bench Press', unit: 'reps', format: (value?: number) => value ? `${value}` : null }
   ];
 
   const findBestValue = (values: (number | undefined)[]) => {
     const validValues = values.filter((v): v is number => v !== undefined);
     if (validValues.length === 0) return -1;
     return values.indexOf(Math.max(...validValues));
+  };
+
+  const hasValidData = (measurement: typeof measurements[0]) => {
+    return players.some(player => 
+      player.measurements?.[measurement.key as keyof typeof player.measurements] !== undefined
+    );
   };
 
   return (
@@ -59,17 +65,20 @@ const MeasurementsChart = ({ players, colors }: MeasurementsChartProps) => {
           p: 3,
           borderRadius: 2,
           position: 'relative',
-          '&::after': {
+          overflow: 'hidden',
+          '&::before': {
             content: '""',
             position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: 200,
-            height: 200,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '100%',
+            height: '100%',
             backgroundImage: 'url(/mavs-logo.png)',
             backgroundSize: 'contain',
+            backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            opacity: 0.05,
+            opacity: 0.03,
             zIndex: 0
           }
         }}
@@ -81,13 +90,14 @@ const MeasurementsChart = ({ players, colors }: MeasurementsChartProps) => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Measurement</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Measurement</TableCell>
                 {players.map((player, index) => (
                   <TableCell
                     key={player.playerId}
                     sx={{
                       color: colors[index],
-                      fontWeight: 600
+                      fontWeight: 600,
+                      borderBottom: `2px solid ${colors[index]}40`
                     }}
                   >
                     {player.name}
@@ -96,34 +106,52 @@ const MeasurementsChart = ({ players, colors }: MeasurementsChartProps) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {measurements.map((measurement) => {
-                const values = players.map(p => p.measurements?.[measurement.key as keyof typeof p.measurements]);
-                const bestIndex = findBestValue(values);
-                
-                return (
-                  <TableRow key={measurement.key}>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ fontWeight: 600 }}
+              {measurements
+                .filter(measurement => hasValidData(measurement))
+                .map((measurement) => {
+                  const values = players.map(p => p.measurements?.[measurement.key as keyof typeof p.measurements]);
+                  const bestIndex = findBestValue(values);
+                  
+                  return (
+                    <TableRow 
+                      key={measurement.key}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover
+                        }
+                      }}
                     >
-                      {measurement.label}
-                    </TableCell>
-                    {players.map((player, index) => (
                       <TableCell
-                        key={player.playerId}
-                        sx={{
-                          color: colors[index],
-                          fontWeight: 500,
-                          backgroundColor: index === bestIndex ? `${colors[index]}15` : 'transparent'
+                        component="th"
+                        scope="row"
+                        sx={{ 
+                          fontWeight: 600,
+                          borderRight: `1px solid ${theme.palette.divider}`
                         }}
                       >
-                        {measurement.format(player.measurements?.[measurement.key as keyof typeof player.measurements])}
+                        {measurement.label}
                       </TableCell>
-                    ))}
-                  </TableRow>
-                );
-              })}
+                      {players.map((player, index) => {
+                        const value = player.measurements?.[measurement.key as keyof typeof player.measurements];
+                        const formattedValue = measurement.format(value);
+                        
+                        return (
+                          <TableCell
+                            key={player.playerId}
+                            sx={{
+                              color: colors[index],
+                              fontWeight: 500,
+                              backgroundColor: index === bestIndex ? `${colors[index]}15` : 'transparent',
+                              transition: 'background-color 0.2s ease-in-out'
+                            }}
+                          >
+                            {formattedValue}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
             </TableBody>
           </Table>
         </TableContainer>

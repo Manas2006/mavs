@@ -7,7 +7,8 @@ import {
   TextField,
   Chip,
   Button,
-  useTheme
+  useTheme,
+  Stack
 } from '@mui/material';
 import { motion } from 'framer-motion';
 
@@ -35,16 +36,9 @@ const PlayerSelector = ({
   const theme = useTheme();
   const [inputValue, setInputValue] = useState('');
 
-  const handlePlayerAdd = (player: Player | null) => {
-    if (!player) return;
-    if (selectedPlayers.length >= maxPlayers) return;
-    if (selectedPlayers.some(p => p.playerId === player.playerId)) return;
-    onPlayersChange([...selectedPlayers, player]);
-    setInputValue('');
-  };
-
-  const handlePlayerRemove = (playerId: number) => {
-    onPlayersChange(selectedPlayers.filter(p => p.playerId !== playerId));
+  const handlePlayerAdd = (players: Player[]) => {
+    if (players.length > maxPlayers) return;
+    onPlayersChange(players);
   };
 
   const handleRandomize = () => {
@@ -53,8 +47,12 @@ const PlayerSelector = ({
     );
     const randomPlayers = [...availablePlayers]
       .sort(() => Math.random() - 0.5)
-      .slice(0, maxPlayers - selectedPlayers.length);
-    onPlayersChange([...selectedPlayers, ...randomPlayers]);
+      .slice(0, maxPlayers);
+    onPlayersChange(randomPlayers);
+  };
+
+  const handleClear = () => {
+    onPlayersChange([]);
   };
 
   return (
@@ -68,24 +66,33 @@ const PlayerSelector = ({
           <Typography variant="h6" sx={{ flex: 1 }}>
             Select Players to Compare
           </Typography>
-          <Button
-            variant="outlined"
-            onClick={handleRandomize}
-            disabled={selectedPlayers.length >= maxPlayers}
-          >
-            Randomize
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              onClick={handleRandomize}
+              disabled={selectedPlayers.length >= maxPlayers}
+            >
+              Randomize
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleClear}
+              disabled={selectedPlayers.length === 0}
+            >
+              Clear All
+            </Button>
+          </Stack>
         </Box>
 
         <Box sx={{ mb: 2 }}>
           <Autocomplete
-            value={null}
+            multiple
+            value={selectedPlayers}
+            onChange={(_, newValue) => handlePlayerAdd(newValue)}
             inputValue={inputValue}
             onInputChange={(_, newValue) => setInputValue(newValue)}
-            onChange={(_, newValue) => handlePlayerAdd(newValue)}
-            options={players.filter(
-              p => !selectedPlayers.some(sp => sp.playerId === p.playerId)
-            )}
+            options={players}
             getOptionLabel={(option) => option.name}
             renderInput={(params) => (
               <TextField
@@ -122,23 +129,25 @@ const PlayerSelector = ({
                 </Box>
               </Box>
             )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  key={option.playerId}
+                  label={option.name}
+                  {...getTagProps({ index })}
+                  sx={{
+                    backgroundColor: theme.palette.background.paper,
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover
+                    }
+                  }}
+                />
+              ))
+            }
+            isOptionEqualToValue={(option, value) => option.playerId === value.playerId}
+            disableCloseOnSelect
+            limitTags={4}
           />
-        </Box>
-
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {selectedPlayers.map((player) => (
-            <Chip
-              key={player.playerId}
-              label={player.name}
-              onDelete={() => handlePlayerRemove(player.playerId)}
-              sx={{
-                backgroundColor: theme.palette.background.paper,
-                '&:hover': {
-                  backgroundColor: theme.palette.action.hover
-                }
-              }}
-            />
-          ))}
         </Box>
 
         {selectedPlayers.length < 2 && (

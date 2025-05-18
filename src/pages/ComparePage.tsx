@@ -44,9 +44,8 @@ const ComparePage = () => {
         
         // Process the data to combine bio, season logs, measurements, and scout rankings
         const processedPlayers = data.bio.map((player: any) => {
-          const seasonStats = data.seasonLogs
-            .filter((log: any) => log.playerId === player.playerId)
-            .sort((a: any, b: any) => b.Season - a.Season)[0] || {};
+          const playerSeasonLogs = data.seasonLogs
+            .filter((log: any) => log.playerId === player.playerId);
           
           const measurements = data.measurements
             .find((m: any) => m.playerId === player.playerId) || {};
@@ -62,14 +61,15 @@ const ComparePage = () => {
             height: player.height,
             weight: player.weight,
             headshot: player.headshot,
-            seasonStats: {
-              PTS: seasonStats.PTS || 0,
-              TRB: seasonStats.TRB || 0,
-              AST: seasonStats.AST || 0,
-              BLK: seasonStats.BLK || 0,
-              STL: seasonStats.STL || 0,
-              MP: seasonStats.MP || 0
-            },
+            seasonStats: playerSeasonLogs.map((log: any) => ({
+              PTS: log.PTS || 0,
+              TRB: log.TRB || 0,
+              AST: log.AST || 0,
+              BLK: log.BLK || 0,
+              STL: log.STL || 0,
+              MP: log.MP || 0,
+              'eFG%': log['eFG%'] || 0
+            })),
             measurements: {
               height: measurements.height,
               weight: measurements.weight,

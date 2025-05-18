@@ -51,10 +51,11 @@ const SeasonStatsChart = ({ players, colors }: SeasonStatsChartProps) => {
             p: 2,
             backgroundColor: theme.palette.background.paper,
             border: `1px solid ${theme.palette.divider}`,
-            borderRadius: 1
+            borderRadius: 1,
+            boxShadow: theme.shadows[3]
           }}
         >
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>{label}</Typography>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>{label}</Typography>
           {payload.map((entry: any, index: number) => (
             <Box
               key={entry.name}
@@ -95,17 +96,20 @@ const SeasonStatsChart = ({ players, colors }: SeasonStatsChartProps) => {
           p: 3,
           borderRadius: 2,
           position: 'relative',
-          '&::after': {
+          overflow: 'hidden',
+          '&::before': {
             content: '""',
             position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: 200,
-            height: 200,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '100%',
+            height: '100%',
             backgroundImage: 'url(/mavs-logo.png)',
             backgroundSize: 'contain',
+            backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            opacity: 0.05,
+            opacity: 0.03,
             zIndex: 0
           }
         }}
@@ -120,23 +124,36 @@ const SeasonStatsChart = ({ players, colors }: SeasonStatsChartProps) => {
               layout="vertical"
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke={theme.palette.divider}
+                horizontal={false}
+              />
               <XAxis
                 type="number"
-                tick={{ fill: theme.palette.text.primary }}
+                tick={{ 
+                  fill: theme.palette.text.primary,
+                  fontSize: 12
+                }}
                 axisLine={{ stroke: theme.palette.divider }}
+                tickFormatter={(value) => value.toFixed(1)}
               />
               <YAxis
                 dataKey="name"
                 type="category"
                 width={150}
-                tick={{ fill: theme.palette.text.primary, fontSize: 12 }}
+                tick={{ 
+                  fill: theme.palette.text.primary, 
+                  fontSize: 12,
+                  fontWeight: 500
+                }}
                 axisLine={{ stroke: theme.palette.divider }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend
                 wrapperStyle={{
-                  paddingTop: 20
+                  paddingTop: 20,
+                  fontSize: 12
                 }}
               />
               {players.map((player, index) => (
