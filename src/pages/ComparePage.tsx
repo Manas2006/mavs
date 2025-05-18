@@ -16,7 +16,6 @@ import SeasonStatsChart from '../components/SeasonStatsChart';
 import MeasurementsChart from '../components/MeasurementsChart';
 import ScoutRankingsTable from '../components/ScoutRankingsTable';
 import RadarChart from '../components/RadarChart';
-import PerformancePodium from '../components/PerformancePodium';
 
 const ComparePage = () => {
   const theme = useTheme();
@@ -171,11 +170,6 @@ const ComparePage = () => {
             <SeasonStatsChart
               players={selectedPlayers}
               colors={colors}
-            />
-
-            {/* Performance Podium */}
-            <PerformancePodium
-              players={selectedPlayers}
             />
 
             {/* Radar Chart */}
