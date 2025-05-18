@@ -1,5 +1,6 @@
 import { Box, Paper, Typography, Avatar, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 interface Player {
   playerId: number;
@@ -9,6 +10,7 @@ interface Player {
   height?: number;
   weight?: number;
   headshot?: string;
+  photoUrl?: string;
 }
 
 interface PlayerInfoCardProps {
@@ -16,8 +18,17 @@ interface PlayerInfoCardProps {
   color: string;
 }
 
+const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+};
+
 const PlayerInfoCard = ({ player, color }: PlayerInfoCardProps) => {
   const theme = useTheme();
+  const [imgError, setImgError] = useState(false);
 
   const formatHeight = (height?: number) => {
     if (!height) return 'N/A';
@@ -25,6 +36,8 @@ const PlayerInfoCard = ({ player, color }: PlayerInfoCardProps) => {
     const inches = height % 12;
     return `${feet}'${inches}"`;
   };
+
+  const imageSrc = player.photoUrl || player.headshot;
 
   return (
     <motion.div
@@ -72,18 +85,47 @@ const PlayerInfoCard = ({ player, color }: PlayerInfoCardProps) => {
         }}
       >
         <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Avatar
-            src={player.headshot}
-            alt={player.name}
-            sx={{
-              width: 120,
-              height: 120,
-              mb: 2,
-              border: `3px solid ${color}`,
-              boxShadow: `0 0 10px ${color}40`,
-              backgroundColor: theme.palette.background.paper
-            }}
-          />
+          {!imgError && imageSrc ? (
+            <Avatar
+              src={imageSrc}
+              alt={player.name}
+              sx={{
+                width: 120,
+                height: 120,
+                mb: 2,
+                border: `3px solid ${color}`,
+                boxShadow: `0 0 10px ${color}40`,
+                backgroundColor: theme.palette.background.paper,
+                objectFit: 'cover',
+                fontSize: 48
+              }}
+              imgProps={{
+                onError: () => setImgError(true)
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                width: 120,
+                height: 120,
+                mb: 2,
+                border: `3px solid ${color}`,
+                boxShadow: `0 0 10px ${color}40`,
+                background: `linear-gradient(135deg, ${color}33 0%, ${theme.palette.background.paper} 100%)`,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 48,
+                fontWeight: 700,
+                color: theme.palette.text.primary,
+                filter: 'blur(0.5px)'
+              }}
+              aria-label={player.name}
+            >
+              {getInitials(player.name)}
+            </Box>
+          )}
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, textAlign: 'center' }}>
             {player.name}
           </Typography>

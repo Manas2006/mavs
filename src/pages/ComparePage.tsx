@@ -60,6 +60,7 @@ const ComparePage = () => {
             position: player.position,
             height: player.height,
             weight: player.weight,
+            photoUrl: player.photoUrl,
             headshot: player.headshot,
             seasonStats: playerSeasonLogs.map((log: any) => ({
               PTS: log.PTS || 0,
@@ -143,13 +144,6 @@ const ComparePage = () => {
           <Typography variant="h4" sx={{ fontWeight: 700 }}>
             Compare Players
           </Typography>
-          <Button
-            variant="contained"
-            onClick={handleRandomize}
-            disabled={selectedPlayers.length >= 4}
-          >
-            Randomize Players
-          </Button>
         </Box>
 
         <PlayerSelector
