@@ -1,6 +1,161 @@
 import { useParams } from 'react-router-dom';
-import { Typography, Box, Paper, Grid, Container, List, ListItem, ListItemText, useTheme, Divider, Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Typography, Box, Paper, Grid, Container, List, ListItem, ListItemText, useTheme, Divider, Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Button, FormControl, InputLabel, Select, MenuItem, Checkbox, FormGroup, FormControlLabel } from '@mui/material';
+import type { Theme } from '@mui/material';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, BarChart, Bar } from 'recharts';
+import styled from '@emotion/styled';
+
+// Styled components
+const GlowingImage = styled(motion.img)<{ theme: Theme }>`
+  width: 200px;
+  height: 260px;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 0 20px ${props => props.theme.palette.primary.main}40;
+  filter: drop-shadow(0 0 8px ${props => props.theme.palette.primary.main}40);
+`;
+
+const ChartContainer = styled(Paper)<{ theme: Theme }>`
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 16px;
+  background: ${props => props.theme.palette.background.paper};
+`;
+
+const RadarChartContainer = styled(Box)`
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+`;
+
+// New styled components for Game Logs
+const GameLogsContainer = styled(Paper)<{ theme: Theme }>`
+  position: relative;
+  padding: 24px;
+  border-radius: 16px;
+  background: ${props => props.theme.palette.background.paper};
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    background-image: url('/mavs logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.04;
+    pointer-events: none;
+  }
+`;
+
+const StatToggleGroup = styled(FormGroup)`
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+`;
+
+const SummaryTable = styled(TableContainer)<{ theme: Theme }>`
+  margin-top: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: ${props => props.theme.palette.background.paper};
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+`;
+
+// Animation variants
+const fadeIn = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 }
+};
+
+// Helper function to round to 3 decimal places
+const roundToThree = (num: number): number => {
+  return Math.round(num * 1000) / 1000;
+};
+
+// Chart data processing functions
+const processSeasonData = (seasonLogs: any[]) => {
+  if (!seasonLogs.length) return { type: 'none', data: [] };
+
+  // Check if all logs are from the same season
+  const uniqueSeasons = new Set(seasonLogs.map(log => log.Season));
+  
+  if (uniqueSeasons.size === 1) {
+    // Single season - use bar chart
+    const season = seasonLogs[0];
+    return {
+      type: 'bar',
+      data: [
+        { name: 'Points', value: roundToThree(season.PTS || 0), color: 'primary' },
+        { name: 'Rebounds', value: roundToThree(season.TRB || 0), color: 'success' },
+        { name: 'Assists', value: roundToThree(season.AST || 0), color: 'info' },
+        { name: 'Blocks', value: roundToThree(season.BLK || 0), color: 'warning' },
+        { name: 'Minutes', value: roundToThree(season.MP || 0), color: 'secondary' }
+      ]
+    };
+  } else {
+    // Multiple seasons - use line chart
+    const processedData = seasonLogs
+      .map(log => ({
+        season: log.Season,
+        league: log.League,
+        pts: roundToThree(log.PTS || 0),
+        trb: roundToThree(log.TRB || 0),
+        ast: roundToThree(log.AST || 0),
+        blk: roundToThree(log.BLK || 0),
+        mp: roundToThree(log.MP || 0),
+      }))
+      .sort((a, b) => a.season - b.season);
+
+    // Group by season if multiple leagues in same season
+    const groupedData = processedData.reduce((acc, curr) => {
+      const existing = acc.find(item => item.season === curr.season);
+      if (existing) {
+        existing.pts = roundToThree((existing.pts + curr.pts) / 2);
+        existing.trb = roundToThree((existing.trb + curr.trb) / 2);
+        existing.ast = roundToThree((existing.ast + curr.ast) / 2);
+        existing.blk = roundToThree((existing.blk + curr.blk) / 2);
+        existing.mp = roundToThree((existing.mp + curr.mp) / 2);
+      } else {
+        acc.push(curr);
+      }
+      return acc;
+    }, [] as any[]);
+
+    return {
+      type: 'line',
+      data: groupedData
+    };
+  }
+};
+
+// Helper function to calculate season averages
+const calculateSeasonAverages = (gameLogs: any[]) => {
+  if (!gameLogs.length) return null;
+
+  const totals = gameLogs.reduce((acc, game) => ({
+    pts: acc.pts + (game.pts || 0),
+    reb: acc.reb + (game.oreb && game.dreb ? game.oreb + game.dreb : game.reb || 0),
+    ast: acc.ast + (game.ast || 0),
+    min: acc.min + (game.timePlayed || 0),
+    games: acc.games + 1
+  }), { pts: 0, reb: 0, ast: 0, min: 0, games: 0 });
+
+  return {
+    ppg: roundToThree(totals.pts / totals.games),
+    rpg: roundToThree(totals.reb / totals.games),
+    apg: roundToThree(totals.ast / totals.games),
+    mpg: roundToThree(totals.min / totals.games)
+  };
+};
 
 const PlayerProfile = () => {
   const { id } = useParams();
@@ -12,9 +167,16 @@ const PlayerProfile = () => {
   const [measurements, setMeasurements] = useState<any>({});
   const [gameLogsView, setGameLogsView] = useState<'perGame' | 'totals'>('perGame');
   const [gameReports, setGameReports] = useState<any[]>([]);
+  const [seasonLogs, setSeasonLogs] = useState<any[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<any | null>(null);
   const [scoutReports, setScoutReports] = useState<any[]>([]);
   const [newReport, setNewReport] = useState({ notes: '', rating: 5 });
+  const [visibleStats, setVisibleStats] = useState({
+    pts: true,
+    reb: true,
+    ast: true,
+    min: true
+  });
   const theme = useTheme();
 
   useEffect(() => {
@@ -29,7 +191,9 @@ const PlayerProfile = () => {
         setScoutRankings(data.scoutRankings.find((r: any) => r.playerId === Number(id)) || {});
         setMeasurements(data.measurements.find((m: any) => m.playerId === Number(id)) || {});
         setGameReports((data.game_logs || []).filter((g: any) => g.playerId === Number(id)));
-        setSeasonTotals((data.seasonLogs || []).find((log: any) => log.playerId === Number(id)) || null);
+        const playerSeasonLogs = (data.seasonLogs || []).filter((log: any) => log.playerId === Number(id));
+        setSeasonLogs(playerSeasonLogs);
+        setSeasonTotals(playerSeasonLogs[playerSeasonLogs.length - 1] || null);
         setScoutReports((data.scoutingReports || []).filter((r: any) => r.playerId === Number(id)));
         setLoading(false);
       })
@@ -39,6 +203,62 @@ const PlayerProfile = () => {
       });
   }, [id]);
 
+  // Process chart data
+  const chartData = processSeasonData(seasonLogs);
+
+  // Calculate radar chart data
+  const calculateRadarData = () => {
+    if (!seasonTotals) return [];
+    
+    const maxValues = {
+      pts: 30,
+      ast: 10,
+      trb: 15,
+      defense: 5,
+      efficiency: 100
+    };
+
+    return [
+      {
+        subject: 'Scoring',
+        value: roundToThree((seasonTotals.PTS / maxValues.pts) * 100),
+        fullMark: 100
+      },
+      {
+        subject: 'Playmaking',
+        value: roundToThree((seasonTotals.AST / maxValues.ast) * 100),
+        fullMark: 100
+      },
+      {
+        subject: 'Rebounding',
+        value: roundToThree((seasonTotals.TRB / maxValues.trb) * 100),
+        fullMark: 100
+      },
+      {
+        subject: 'Defense',
+        value: roundToThree((((seasonTotals.BLK || 0) + (seasonTotals.STL || 0)) / maxValues.defense) * 100),
+        fullMark: 100
+      },
+      {
+        subject: 'Efficiency',
+        value: roundToThree(seasonTotals['eFG%'] || 0),
+        fullMark: 100
+      }
+    ];
+  };
+
+  // Process game logs for visualization
+  const processGameLogs = () => {
+    return gameReports.map((game, index) => ({
+      game: index + 1,
+      date: game.date ? new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `Game ${index + 1}`,
+      pts: roundToThree(game.pts || 0),
+      reb: roundToThree(game.oreb && game.dreb ? game.oreb + game.dreb : game.reb || 0),
+      ast: roundToThree(game.ast || 0),
+      min: roundToThree(game.timePlayed || 0)
+    }));
+  };
+
   const handleSubmitReport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReport.notes.trim()) return;
@@ -47,7 +267,7 @@ const PlayerProfile = () => {
       ...newReport,
       playerId: Number(id),
       reportId: Date.now().toString(),
-      scout: 'Current User' // In a real app, this would come from authentication
+      scout: 'Current Scout'
     };
     
     setScoutReports([report, ...scoutReports]);
@@ -58,7 +278,6 @@ const PlayerProfile = () => {
   if (error) return <Box>Error: {error}</Box>;
   if (!player) return <Box><Typography variant="h4">Player not found</Typography></Box>;
 
-  // Calculate age
   const getAge = (birthDate: string) => {
     const dob = new Date(birthDate);
     const diff = Date.now() - dob.getTime();
@@ -67,44 +286,46 @@ const PlayerProfile = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 2, md: 4 }, display: 'flex', justifyContent: 'center' }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, display: 'flex', justifyContent: 'center' }}>
       <Paper
         variant="outlined"
         sx={{
           p: { xs: 2, sm: 4 },
           borderRadius: 4,
           position: 'relative',
-          maxWidth: 800,
           width: '100%',
           overflow: 'hidden',
           boxShadow: theme.palette.mode === 'dark' ? 8 : 3,
           bgcolor: 'background.paper',
         }}
       >
-        {/* Mavericks logo top-left */}
         <Box sx={{ position: 'absolute', top: 20, left: 20, zIndex: 2 }}>
           <img src="/mavs logo.png" alt="Mavs Logo" height={36} style={{ opacity: 0.9 }} />
         </Box>
-        {/* Player Name */}
-        <Typography variant="h3" sx={{ fontWeight: 800, mb: 3, textAlign: 'center', color: theme.palette.primary.main }}>
+        
+        <Typography variant="h3" sx={{ fontWeight: 800, mb: 4, textAlign: 'center', color: theme.palette.primary.main }}>
           {player.name}
         </Typography>
-        <Grid container spacing={4} alignItems="flex-start" justifyContent="center" wrap="wrap-reverse">
-          {/* Left: Headshot */}
-          <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-            <Box sx={{ width: 200, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Paper elevation={4} sx={{ borderRadius: 4, overflow: 'hidden', boxShadow: 6 }}>
-                <img
-                  src={player.photoUrl}
-                  alt={player.name}
-                  style={{ width: 200, height: 260, objectFit: 'cover', borderRadius: 16 }}
-                />
-              </Paper>
+
+        {/* Top Section: 3-column layout */}
+        <Grid container spacing={4} alignItems="flex-start" sx={{ mb: 4 }}>
+          {/* Left: Player Image */}
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <GlowingImage
+                src={player.photoUrl}
+                alt={player.name}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                theme={theme}
+              />
             </Box>
           </Grid>
-          {/* Right: Info */}
-          <Grid item xs={12} md={8}>
-            <Box sx={{ px: { xs: 0, md: 2 }, py: 1 }}>
+
+          {/* Middle: Player Info */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'background.default' }}>
               <List dense>
                 <ListItem>
                   <ListItemText primary={<b>Team</b>} secondary={player.currentTeam || 'N/A'} />
@@ -116,154 +337,390 @@ const PlayerProfile = () => {
                   <ListItemText primary={<b>Hometown</b>} secondary={player.homeTown || 'N/A'} />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary={<b>Height</b>} secondary={player.height ? `${player.height} in` : 'N/A'} />
+                  <ListItemText primary={<b>Height</b>} secondary={player.height ? `${Math.floor(player.height / 12)}'${player.height % 12}"` : 'N/A'} />
                 </ListItem>
                 <ListItem>
                   <ListItemText primary={<b>Weight</b>} secondary={player.weight ? `${player.weight} lbs` : 'N/A'} />
                 </ListItem>
               </List>
-            </Box>
+            </Paper>
+          </Grid>
+
+          {/* Right: Radar Chart */}
+          <Grid item xs={12} md={4}>
+            {seasonTotals && (
+              <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'background.default', height: '100%' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: theme.palette.primary.main }}>Player Attributes</Typography>
+                <Box sx={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={calculateRadarData()}>
+                      <PolarGrid />
+                      <PolarAngleAxis 
+                        dataKey="subject" 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                      />
+                      <PolarRadiusAxis 
+                        angle={30} 
+                        domain={[0, 100]}
+                        tick={{ fontSize: 10 }}
+                        tickCount={5}
+                      />
+                      <Radar
+                        name="Attributes"
+                        dataKey="value"
+                        stroke={theme.palette.primary.main}
+                        fill={theme.palette.primary.main}
+                        fillOpacity={0.3}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                  Normalized attributes based on season performance
+                </Typography>
+              </Paper>
+            )}
           </Grid>
         </Grid>
+
         <Divider sx={{ my: 3 }} />
-        {/* Tabs */}
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary" sx={{ mb: 2 }}>
+
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary" sx={{ mb: 3 }}>
           <Tab label="Overview" />
           <Tab label="Game Logs" />
           <Tab label="Scouting Reports" />
         </Tabs>
+
         <Box sx={{ minHeight: 200 }}>
           {tab === 0 && (
-            <Box>
-              {/* Scout Rankings Section */}
-              <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 1 }}>Scout Rankings</Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-                {Object.entries(scoutRankings)
-                  .filter(([k]) => k !== 'playerId')
-                  .map(([scout, rank]) => {
-                    // Calculate average for outlier highlighting
-                    const values = Object.entries(scoutRankings)
-                      .filter(([k]) => k !== 'playerId' && typeof scoutRankings[k] === 'number')
-                      .map(([_, v]) => v as number);
-                    const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
-                    const diff = typeof rank === 'number' && avg !== null ? rank - avg : 0;
-                    let color: 'success' | 'error' | 'default' = 'default';
-                    if (diff <= -3) color = 'success';
-                    if (diff >= 3) color = 'error';
-                    return (
-                      <Box key={scout} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{scout}:</Typography>
-                        <Box
-                          component="span"
-                          sx={{
-                            px: 1.5,
-                            py: 0.5,
-                            borderRadius: 2,
-                            bgcolor:
-                              color === 'success'
-                                ? theme.palette.success.main
-                                : color === 'error'
-                                ? theme.palette.error.main
-                                : theme.palette.action.selected,
-                            color: color !== 'default' ? '#fff' : theme.palette.text.primary,
-                            fontWeight: 700,
-                            fontSize: '1rem',
-                            minWidth: 28,
-                            textAlign: 'center',
-                            cursor: color !== 'default' ? 'pointer' : 'default',
-                            transition: 'background 0.2s',
-                          }}
-                          title={
-                            color !== 'default' && typeof diff === 'number'
-                              ? `${Math.abs(diff)} spots ${diff < 0 ? 'higher' : 'lower'} than avg`
-                              : undefined
-                          }
-                        >
-                          {String(rank !== undefined && rank !== null ? rank : '-')}
-                        </Box>
-                      </Box>
-                    );
-                  })}
-              </Box>
-              <Divider sx={{ my: 2 }} />
-              {/* Measurements Section */}
-              <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 1 }}>Measurements</Typography>
-              <Grid container spacing={1}>
-                {Object.entries(measurements)
-                  .filter(([k]) => k !== 'playerId')
-                  .map(([key, value]) => (
-                    <Grid item xs={6} key={key}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}:</Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>{String(value !== undefined && value !== null ? value : '-')}</Typography>
+            <motion.div {...fadeIn}>
+              <Grid container spacing={4}>
+                {/* Left: Scout Rankings and Measurements */}
+                <Grid item xs={12} md={6}>
+                  {/* Scout Rankings */}
+                  <Paper sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+                    <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>Scout Rankings</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                      {Object.entries(scoutRankings)
+                        .filter(([k]) => k !== 'playerId')
+                        .map(([scout, rank]) => {
+                          const values = Object.entries(scoutRankings)
+                            .filter(([k]) => k !== 'playerId' && typeof scoutRankings[k] === 'number')
+                            .map(([_, v]) => v as number);
+                          const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+                          const diff = typeof rank === 'number' && avg !== null ? rank - avg : 0;
+                          let color: 'success' | 'error' | 'default' = 'default';
+                          if (diff <= -3) color = 'success';
+                          if (diff >= 3) color = 'error';
+                          return (
+                            <Box key={scout} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{scout}:</Typography>
+                              <Box
+                                component="span"
+                                sx={{
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: 2,
+                                  bgcolor:
+                                    color === 'success'
+                                      ? theme.palette.success.main
+                                      : color === 'error'
+                                      ? theme.palette.error.main
+                                      : theme.palette.action.selected,
+                                  color: color !== 'default' ? '#fff' : theme.palette.text.primary,
+                                  fontWeight: 700,
+                                  fontSize: '1rem',
+                                  minWidth: 28,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {String(rank !== undefined && rank !== null ? rank : '-')}
+                              </Box>
+                            </Box>
+                          );
+                        })}
+                    </Box>
+                  </Paper>
+
+                  {/* Measurements */}
+                  <Paper sx={{ p: 2, borderRadius: 2 }}>
+                    <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>Measurements</Typography>
+                    <Grid container spacing={2}>
+                      {Object.entries(measurements)
+                        .filter(([k]) => k !== 'playerId')
+                        .map(([key, value]) => (
+                          <Grid item xs={6} key={key}>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}:
+                            </Typography>
+                            <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
+                              {String(value !== undefined && value !== null ? value : '-')}
+                            </Typography>
+                          </Grid>
+                        ))}
                     </Grid>
-                  ))}
+                  </Paper>
+                </Grid>
+
+                {/* Right: Season Performance Chart */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                    <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>
+                      {chartData.type === 'line' ? 'Season Performance' : 'Season Averages'}
+                    </Typography>
+                    <Box sx={{ height: 400 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        {chartData.type === 'line' ? (
+                          <LineChart data={chartData.data}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis 
+                              dataKey="season" 
+                              tick={{ fontSize: 12 }}
+                              label={{ value: 'Season', position: 'insideBottom', offset: -5 }}
+                            />
+                            <YAxis 
+                              tick={{ fontSize: 12 }}
+                              label={{ value: 'Value', angle: -90, position: 'insideLeft' }}
+                            />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="pts" stroke={theme.palette.primary.main} name="Points" />
+                            <Line type="monotone" dataKey="trb" stroke={theme.palette.success.main} name="Rebounds" />
+                            <Line type="monotone" dataKey="ast" stroke={theme.palette.info.main} name="Assists" />
+                            <Line type="monotone" dataKey="blk" stroke={theme.palette.warning.main} name="Blocks" />
+                            <Line type="monotone" dataKey="mp" stroke={theme.palette.secondary.main} name="Minutes" />
+                          </LineChart>
+                        ) : chartData.type === 'bar' ? (
+                          <BarChart data={chartData.data}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis 
+                              dataKey="name" 
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              tick={{ fontSize: 12 }}
+                              label={{ value: 'Value', angle: -90, position: 'insideLeft' }}
+                            />
+                            <Tooltip />
+                            <Bar 
+                              dataKey="value" 
+                              fill={theme.palette.primary.main}
+                              radius={[4, 4, 0, 0]}
+                            />
+                          </BarChart>
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                            <Typography color="text.secondary">No season data available</Typography>
+                          </Box>
+                        )}
+                      </ResponsiveContainer>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                      {chartData.type === 'line' 
+                        ? 'Performance trends across seasons' 
+                        : chartData.type === 'bar' 
+                          ? 'Single season averages' 
+                          : ''}
+                    </Typography>
+                  </Paper>
+                </Grid>
               </Grid>
-              <Divider sx={{ my: 2 }} />
-              {/* Fit for Mavericks Section */}
-              <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 1 }}>Fit for Mavericks</Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Box sx={{ bgcolor: theme.palette.primary.main, color: '#fff', px: 2, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: '0.95rem' }}>High Potential</Box>
-                <Box sx={{ bgcolor: theme.palette.success.main, color: '#fff', px: 2, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: '0.95rem' }}>Strong Fit</Box>
-                <Box sx={{ bgcolor: theme.palette.info.main, color: '#fff', px: 2, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: '0.95rem' }}>Versatile</Box>
-              </Box>
-            </Box>
+            </motion.div>
           )}
+
           {tab === 1 && (
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <ToggleButtonGroup
-                  value={gameLogsView}
-                  exclusive
-                  onChange={(_, v) => v && setGameLogsView(v)}
-                  size="small"
-                  sx={{ bgcolor: theme.palette.action.hover, borderRadius: 2 }}
-                >
-                  <ToggleButton value="perGame" sx={{ fontWeight: 600 }}>Per Game</ToggleButton>
-                  <ToggleButton value="totals" sx={{ fontWeight: 600 }}>Totals</ToggleButton>
-                </ToggleButtonGroup>
+            <GameLogsContainer theme={theme}>
+              <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 3 }}>
+                Game-by-Game Performance
+              </Typography>
+
+              {/* Stat Toggles */}
+              <StatToggleGroup>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={visibleStats.pts}
+                      onChange={(e) => setVisibleStats(prev => ({ ...prev, pts: e.target.checked }))}
+                      sx={{ color: theme.palette.primary.main }}
+                    />
+                  }
+                  label="Points"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={visibleStats.reb}
+                      onChange={(e) => setVisibleStats(prev => ({ ...prev, reb: e.target.checked }))}
+                      sx={{ color: theme.palette.success.main }}
+                    />
+                  }
+                  label="Rebounds"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={visibleStats.ast}
+                      onChange={(e) => setVisibleStats(prev => ({ ...prev, ast: e.target.checked }))}
+                      sx={{ color: theme.palette.info.main }}
+                    />
+                  }
+                  label="Assists"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={visibleStats.min}
+                      onChange={(e) => setVisibleStats(prev => ({ ...prev, min: e.target.checked }))}
+                      sx={{ color: theme.palette.secondary.main }}
+                    />
+                  }
+                  label="Minutes"
+                />
+              </StatToggleGroup>
+
+              {/* Game Performance Chart */}
+              <Box sx={{ height: 400, mb: 4 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={processGameLogs()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={{ stroke: theme.palette.primary.main }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={{ stroke: theme.palette.primary.main }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: theme.palette.background.paper,
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 8
+                      }}
+                    />
+                    <Legend />
+                    <AnimatePresence>
+                      {visibleStats.pts && (
+                        <Line 
+                          type="monotone" 
+                          dataKey="pts" 
+                          stroke={theme.palette.primary.main} 
+                          name="Points"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      )}
+                      {visibleStats.reb && (
+                        <Line 
+                          type="monotone" 
+                          dataKey="reb" 
+                          stroke={theme.palette.success.main} 
+                          name="Rebounds"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      )}
+                      {visibleStats.ast && (
+                        <Line 
+                          type="monotone" 
+                          dataKey="ast" 
+                          stroke={theme.palette.info.main} 
+                          name="Assists"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      )}
+                      {visibleStats.min && (
+                        <Line 
+                          type="monotone" 
+                          dataKey="min" 
+                          stroke={theme.palette.secondary.main} 
+                          name="Minutes"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </LineChart>
+                </ResponsiveContainer>
               </Box>
-              <TableContainer component={Paper} sx={{ maxHeight: 400, overflowX: 'auto', borderRadius: 2 }}>
-                <Table size="small" stickyHeader>
+
+              {/* Season Summary Stats */}
+              <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>
+                Season Averages
+              </Typography>
+              <SummaryTable theme={theme}>
+                <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Opponent</TableCell>
-                      <TableCell>PTS</TableCell>
-                      <TableCell>REB</TableCell>
-                      <TableCell>AST</TableCell>
-                      <TableCell>MIN</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Stat</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Average</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Description</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {gameLogsView === 'perGame'
-                      ? gameReports.map((game, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{game.date ? new Date(game.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}</TableCell>
-                            <TableCell>{game.opponent || '-'}</TableCell>
-                            <TableCell>{game.pts ?? '-'}</TableCell>
-                            <TableCell>{game.oreb && game.dreb ? game.oreb + game.dreb : game.reb ?? '-'}</TableCell>
-                            <TableCell>{game.ast ?? '-'}</TableCell>
-                            <TableCell>{game.timePlayed ?? '-'}</TableCell>
-                          </TableRow>
-                        ))
-                      : seasonTotals ? (
-                          <TableRow>
-                            <TableCell colSpan={2} sx={{ fontWeight: 700 }}>Totals</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.PTS ?? '-'}</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.ORB && seasonTotals.DRB ? seasonTotals.ORB + seasonTotals.DRB : seasonTotals.TRB ?? '-'}</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.AST ?? '-'}</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{seasonTotals.MP ?? '-'}</TableCell>
-                          </TableRow>
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={6} align="center">No season totals available.</TableCell>
-                          </TableRow>
-                        )}
+                    {(() => {
+                      const averages = calculateSeasonAverages(gameReports);
+                      if (!averages) return (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">No game data available</TableCell>
+                        </TableRow>
+                      );
+
+                      return [
+                        {
+                          stat: 'PPG',
+                          value: averages.ppg,
+                          desc: 'Points per game'
+                        },
+                        {
+                          stat: 'RPG',
+                          value: averages.rpg,
+                          desc: 'Rebounds per game'
+                        },
+                        {
+                          stat: 'APG',
+                          value: averages.apg,
+                          desc: 'Assists per game'
+                        },
+                        {
+                          stat: 'MPG',
+                          value: averages.mpg,
+                          desc: 'Minutes per game'
+                        }
+                      ].map((row) => (
+                        <TableRow 
+                          key={row.stat}
+                          sx={{ 
+                            '&:hover': { 
+                              backgroundColor: theme.palette.action.hover 
+                            }
+                          }}
+                        >
+                          <TableCell sx={{ fontWeight: 600 }}>{row.stat}</TableCell>
+                          <TableCell sx={{ fontWeight: 700, fontSize: '1.1rem', color: theme.palette.primary.main }}>
+                            {row.value}
+                          </TableCell>
+                          <TableCell sx={{ color: theme.palette.text.secondary }}>
+                            {row.desc}
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
                   </TableBody>
                 </Table>
-              </TableContainer>
-            </Box>
+              </SummaryTable>
+            </GameLogsContainer>
           )}
+
           {tab === 2 && (
             <Box>
               <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 2 }}>Scouting Reports</Typography>
@@ -310,7 +767,7 @@ const PlayerProfile = () => {
                       <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>{report.scout}</Typography>
                     )}
                     <Typography variant="body2" color="text.secondary">Rating: {report.rating}/10</Typography>
-                    <Typography variant="body1">{report.report}</Typography>
+                    <Typography variant="body1">{report.notes}</Typography>
                   </Paper>
                 ))
               )}
