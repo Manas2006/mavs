@@ -380,7 +380,7 @@ const PlayerProfile = () => {
             }}>
               <List dense sx={{ width: '100%' }}>
                 <ListItem>
-                  <ListItemText primary={<b>Team</b>} secondary={player.currentTeam || 'N/A'} />
+                  <ListItemText primary={<b>Team</b>} secondary={player.currentTeam ? player.currentTeam.replace(/^\|/, '').trim() : 'N/A'} />
                 </ListItem>
                 <ListItem>
                   <ListItemText primary={<b>Age</b>} secondary={player.birthDate ? getAge(player.birthDate) : 'N/A'} />
@@ -484,23 +484,23 @@ const PlayerProfile = () => {
                         const entries = Object.entries(scoutRankings).filter(([k]) => k !== 'playerId');
                         const values = entries.filter(([_, v]) => typeof v === 'number').map(([_, v]) => v as number);
                         const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
-                        // Only show variance if at least 3 rankings
-                        if (values.length < 3) {
-                          return <Typography variant="body2" color="text.secondary">Not enough scout rankings to show variance.</Typography>;
-                        }
-                        return entries.map(([scout, rank]) => {
+                        
+                        // First show all rankings
+                        const rankings = entries.map(([scout, rank]) => {
                           if (typeof rank !== 'number') return null;
                           const diff = avg !== null ? rank - avg : 0;
                           let color: 'success' | 'error' | 'default' = 'default';
-                          if (diff <= -3) color = 'success';
-                          if (diff >= 3) color = 'error';
+                          // Only show colors if we have enough rankings
+                          if (values.length >= 3) {
+                            if (diff <= -3) color = 'success';
+                            if (diff >= 3) color = 'error';
+                          }
                           const showTooltip = color === 'success' || color === 'error';
                           const tooltipText = diff > 0
                             ? `+${diff.toFixed(2)} above avg`
                             : `${diff.toFixed(2)} below avg`;
                           const badge = (
                             <Box
-                              component="span"
                               sx={{
                                 px: 1.5,
                                 py: 0.5,
@@ -530,6 +530,17 @@ const PlayerProfile = () => {
                             </Box>
                           );
                         });
+
+                        // Then show variance message if not enough data
+                        if (values.length < 3) {
+                          rankings.push(
+                            <Typography key="variance-message" variant="body2" color="text.secondary" sx={{ width: '100%', mt: 1 }}>
+                              Not enough scout rankings to show variance.
+                            </Typography>
+                          );
+                        }
+
+                        return rankings;
                       })()}
                     </Box>
                   </Paper>

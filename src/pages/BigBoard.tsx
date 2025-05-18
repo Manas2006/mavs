@@ -84,7 +84,11 @@ const BigBoard = () => {
       .then(data => {
         const enriched = data.bio.map((player: any) => {
           const seasonStats = data.seasonLogs.find((log: any) => log.playerId === player.playerId) || {};
-          return { ...player, seasonStats };
+          return { 
+            ...player, 
+            seasonStats,
+            currentTeam: player.currentTeam ? player.currentTeam.replace(/^\|/, '').trim() : null
+          };
         });
         setPlayers(enriched);
         const teams = Array.from(new Set(enriched.map((p: any) => p.currentTeam).filter(Boolean))) as string[];
@@ -187,7 +191,9 @@ const BigBoard = () => {
                         {player.name}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {player.position} | {player.currentTeam}
+                        {player.position && player.currentTeam 
+                          ? `${player.position} | ${player.currentTeam}`
+                          : player.position || player.currentTeam || '—'}
                       </Typography>
                     </Box>
                   </Box>
