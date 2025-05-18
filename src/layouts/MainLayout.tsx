@@ -11,7 +11,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ mode, toggleMode }) => {
   const theme = useTheme();
   const { pathname } = useLocation();
   const isHome = pathname === '/';
-  const isAppPage = !isHome; // All non-home routes
 
   // Determine navbar colors based on mode
   const navbarBg = isHome ? 'transparent' : (mode === 'dark' ? '#0d0d0d' : '#ffffff');
