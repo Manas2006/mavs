@@ -56,7 +56,7 @@ const SeasonStatsChart = ({ players, colors }: SeasonStatsChartProps) => {
           }}
         >
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>{label}</Typography>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry: any) => (
             <Box
               key={entry.name}
               sx={{
