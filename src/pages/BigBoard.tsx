@@ -107,7 +107,7 @@ const BigBoard = () => {
     return matchesName && matchesTeam;
   });
 
-  if (loading) return <Box>Loading...</Box>;
+  if (loading) return <Box><Typography sx={{ color: '#fff' }}>Loading...</Typography></Box>;
   if (error) return <Box>Error: {error}</Box>;
 
   return (

@@ -119,7 +119,7 @@ const ComparePage = () => {
           minHeight: '60vh'
         }}
       >
-        <CircularProgress />
+        <Typography sx={{ color: '#fff' }}>Loading...</Typography>
       </Box>
     );
   }
