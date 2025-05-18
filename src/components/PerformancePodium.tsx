@@ -1,10 +1,9 @@
-import { Box, Paper, Typography, useTheme, Tooltip } from '@mui/material';
+import { Paper, Typography, useTheme, Tooltip, Box } from '@mui/material';
 import { motion } from 'framer-motion';
 import type { Player } from '../types/player';
 
 interface PerformancePodiumProps {
   players: Player[];
-  colors: string[];
 }
 
 const leagueMultipliers: Record<string, number> = {
@@ -63,7 +62,7 @@ const getOlympicOrder = (arr: any[]) => {
   return arr;
 };
 
-const PerformancePodium = ({ players, colors }: PerformancePodiumProps) => {
+const PerformancePodium = ({ players }: PerformancePodiumProps) => {
   const theme = useTheme();
 
   // Calculate scores and sort players
@@ -124,7 +123,7 @@ const PerformancePodium = ({ players, colors }: PerformancePodiumProps) => {
             minHeight: maxHeight + 40
           }}
         >
-          {podiumOrder.map((player, index) => {
+          {podiumOrder.map((player) => {
             const place = playersWithScores.findIndex(p => p.playerId === player.playerId);
             const podiumColor = place === 0 ? '#FFD700' : place === 1 ? '#C0C0C0' : place === 2 ? '#CD7F32' : theme.palette.grey[700];
             const height = minHeight + ((player.score / maxScore) * (maxHeight - minHeight));
