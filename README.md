@@ -142,7 +142,7 @@ MIT
 
 ---
 
-> _Developed by Manas Pathak. Not affiliated with the Dallas Mavericks or the NBA._
+> _Developed by Manas Pathak.
 
 ---
 
