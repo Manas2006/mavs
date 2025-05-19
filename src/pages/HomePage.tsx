@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
 import styled from '@emotion/styled';
 
